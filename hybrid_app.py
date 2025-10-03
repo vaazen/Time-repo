@@ -30,6 +30,15 @@ from enhanced_ui import DragDropTaskWidget, TimelineWidget, ModernTaskDialog
 from cloud_sync import cloud_sync_manager, data_exporter
 from performance_optimizer import get_performance_optimizer
 
+# Новые модули v5.0
+try:
+    from ai_assistant import AIAssistant, AIAssistantUI, integrate_ai_assistant
+    from integrations_manager import IntegrationsManager, IntegrationsUI, integrate_external_services
+    AI_MODULES_AVAILABLE = True
+except ImportError as e:
+    print(f"ИИ модули недоступны: {e}")
+    AI_MODULES_AVAILABLE = False
+
 
 
 class JavaScriptUIComponent(QWidget if not WEBENGINE_AVAILABLE else QWebEngineView):
@@ -711,15 +720,40 @@ class HybridTimeBlockingApp(QMainWindow):
                 self.smart_notification_manager = get_smart_notification_manager()
                 self.advanced_analytics_widget = get_advanced_analytics_widget()
                 self.performance_optimizer = get_performance_optimizer()
-                print("✅ Улучшенные модули успешно инициализированы")
+                
+                # Инициализация новых модулей v5.0
+                if AI_MODULES_AVAILABLE:
+                    self.init_ai_modules()
+                
+                print("Улучшенные модули успешно инициализированы")
             else:
-                print("⚠️ QApplication не найдено, улучшенные модули будут инициализированы позже")
+                print("QApplication не найдено, улучшенные модули будут инициализированы позже")
         except Exception as e:
-            print(f"⚠️ Ошибка инициализации улучшенных модулей: {e}")
+            print(f"Ошибка инициализации улучшенных модулей: {e}")
             # Устанавливаем заглушки
             self.smart_notification_manager = None
             self.advanced_analytics_widget = None
             self.performance_optimizer = None
+    
+    def init_ai_modules(self):
+        """Инициализация ИИ модулей"""
+        try:
+            # Создаем ИИ-помощника с ключом OpenAI
+            openai_key = "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"
+            self.ai_assistant = AIAssistant(openai_key)
+            self.ai_ui = AIAssistantUI(self, self.ai_assistant)
+            
+            # Создаем менеджер интеграций
+            self.integrations_manager = IntegrationsManager()
+            self.integrations_ui = IntegrationsUI(self, self.integrations_manager)
+            
+            print("ИИ-помощник и интеграции инициализированы")
+        except Exception as e:
+            print(f"Ошибка инициализации ИИ модулей: {e}")
+            self.ai_assistant = None
+            self.ai_ui = None
+            self.integrations_manager = None
+            self.integrations_ui = None
     
     def init_ui(self):
         """Инициализация пользовательского интерфейса"""
@@ -786,6 +820,18 @@ class HybridTimeBlockingApp(QMainWindow):
         # Вкладка управления задачами
         self.tasks_tab = self.create_tasks_tab()
         self.tabs.addTab(self.tasks_tab, _("tab_tasks"))
+        
+        # Новые вкладки v5.0
+        if AI_MODULES_AVAILABLE and hasattr(self, 'ai_ui') and self.ai_ui:
+            self.ai_tab = self.create_ai_tab()
+            self.tabs.addTab(self.ai_tab, "🤖 ИИ-Помощник")
+            
+            self.integrations_tab = self.create_integrations_tab()
+            self.tabs.addTab(self.integrations_tab, "🔗 Интеграции")
+        
+        # Добавляем вкладку настроек
+        self.settings_tab = self.create_settings_tab()
+        self.tabs.addTab(self.settings_tab, "⚙️ Настройки")
         
         # Вкладка производительности удалена для упрощения
         
@@ -1232,29 +1278,535 @@ class HybridTimeBlockingApp(QMainWindow):
             TaskStatus.CANCELLED: QColor(244, 67, 54)    # Красный
         }
         return color_map.get(status, QColor(70, 70, 70))
+    
+    def create_ai_tab(self):
+        """Создание вкладки ИИ-помощника"""
+        ai_widget = QWidget()
+        layout = QVBoxLayout()
+        
+        # Заголовок
+        title = QLabel("🤖 ИИ-Помощник для планирования")
+        title.setStyleSheet("font-size: 18px; font-weight: bold; padding: 10px;")
+        layout.addWidget(title)
+        
+        # Кнопки функций
+        buttons_layout = QHBoxLayout()
+        
+        analyze_btn = QPushButton("📊 Анализ задач")
+        analyze_btn.clicked.connect(self.analyze_tasks_with_ai)
+        buttons_layout.addWidget(analyze_btn)
+        
+        schedule_btn = QPushButton("⏰ Умное планирование")
+        schedule_btn.clicked.connect(self.smart_scheduling)
+        buttons_layout.addWidget(schedule_btn)
+        
+        insights_btn = QPushButton("💡 Инсайты")
+        insights_btn.clicked.connect(self.show_productivity_insights)
+        buttons_layout.addWidget(insights_btn)
+        
+        chat_btn = QPushButton("💬 Чат с ИИ")
+        chat_btn.clicked.connect(self.open_ai_chat)
+        buttons_layout.addWidget(chat_btn)
+        
+        reset_btn = QPushButton("🔄 Сброс API")
+        reset_btn.clicked.connect(self.reset_ai_api)
+        buttons_layout.addWidget(reset_btn)
+        
+        layout.addLayout(buttons_layout)
+        
+        # Область результатов
+        self.ai_results = QTextEdit()
+        self.ai_results.setPlaceholderText("Результаты анализа ИИ будут отображаться здесь...")
+        layout.addWidget(self.ai_results)
+        
+        ai_widget.setLayout(layout)
+        return ai_widget
+    
+    def create_integrations_tab(self):
+        """Создание вкладки интеграций"""
+        integrations_widget = QWidget()
+        layout = QVBoxLayout()
+        
+        # Заголовок
+        title = QLabel("🔗 Интеграции с внешними сервисами")
+        title.setStyleSheet("font-size: 18px; font-weight: bold; padding: 10px;")
+        layout.addWidget(title)
+        
+        # Slack секция
+        slack_group = QWidget()
+        slack_layout = QVBoxLayout()
+        slack_title = QLabel("📱 Slack")
+        slack_title.setStyleSheet("font-size: 14px; font-weight: bold;")
+        slack_layout.addWidget(slack_title)
+        
+        slack_buttons = QHBoxLayout()
+        setup_slack_btn = QPushButton("Настроить Slack")
+        setup_slack_btn.clicked.connect(self.setup_slack_integration)
+        test_slack_btn = QPushButton("Тест уведомления")
+        test_slack_btn.clicked.connect(self.test_slack_notification)
+        
+        slack_buttons.addWidget(setup_slack_btn)
+        slack_buttons.addWidget(test_slack_btn)
+        slack_layout.addLayout(slack_buttons)
+        slack_group.setLayout(slack_layout)
+        layout.addWidget(slack_group)
+        
+        # Trello секция
+        trello_group = QWidget()
+        trello_layout = QVBoxLayout()
+        trello_title = QLabel("📋 Trello")
+        trello_title.setStyleSheet("font-size: 14px; font-weight: bold;")
+        trello_layout.addWidget(trello_title)
+        
+        trello_buttons = QHBoxLayout()
+        setup_trello_btn = QPushButton("Настроить Trello")
+        setup_trello_btn.clicked.connect(self.setup_trello_integration)
+        sync_trello_btn = QPushButton("Синхронизировать")
+        sync_trello_btn.clicked.connect(self.sync_with_trello)
+        
+        trello_buttons.addWidget(setup_trello_btn)
+        trello_buttons.addWidget(sync_trello_btn)
+        trello_layout.addLayout(trello_buttons)
+        trello_group.setLayout(trello_layout)
+        layout.addWidget(trello_group)
+        
+        # Notion секция
+        notion_group = QWidget()
+        notion_layout = QVBoxLayout()
+        notion_title = QLabel("📝 Notion")
+        notion_title.setStyleSheet("font-size: 14px; font-weight: bold;")
+        notion_layout.addWidget(notion_title)
+        
+        notion_buttons = QHBoxLayout()
+        setup_notion_btn = QPushButton("Настроить Notion")
+        setup_notion_btn.clicked.connect(self.setup_notion_integration)
+        sync_notion_btn = QPushButton("Синхронизировать")
+        sync_notion_btn.clicked.connect(self.sync_with_notion)
+        
+        notion_buttons.addWidget(setup_notion_btn)
+        notion_buttons.addWidget(sync_notion_btn)
+        notion_layout.addLayout(notion_buttons)
+        notion_group.setLayout(notion_layout)
+        layout.addWidget(notion_group)
+        
+        # Статус интеграций
+        self.integrations_status = QTextEdit()
+        self.integrations_status.setPlaceholderText("Статус интеграций будет отображаться здесь...")
+        self.update_integrations_status()
+        layout.addWidget(self.integrations_status)
+        
+        integrations_widget.setLayout(layout)
+        return integrations_widget
+    
+    # Методы для ИИ-помощника
+    def analyze_tasks_with_ai(self):
+        """Анализ задач с помощью ИИ"""
+        if not hasattr(self, 'ai_assistant') or not self.ai_assistant:
+            QMessageBox.warning(self, "Ошибка", "ИИ-помощник недоступен")
+            return
+        
+        self.ai_results.setText("🔄 Анализирую ваши задачи...")
+        
+        # Получаем задачи из task_manager
+        tasks = task_manager.get_all_tasks()
+        if not tasks:
+            self.ai_results.setText("❌ Нет задач для анализа")
+            return
+        
+        # Конвертируем задачи в формат для ИИ
+        tasks_data = []
+        for task in tasks:
+            task_dict = {
+                "title": task.title,
+                "description": task.description,
+                "priority": task.priority.value,
+                "status": task.status.value,
+                "created_at": task.created_at.isoformat() if hasattr(task, 'created_at') else "",
+                "deadline": task.end_time.isoformat() if task.end_time else ""
+            }
+            tasks_data.append(task_dict)
+        
+        # Запускаем анализ в отдельном потоке
+        import threading
+        def analyze():
+            try:
+                analysis = self.ai_assistant.analyze_tasks(tasks_data)
+                result_text = "🤖 Анализ ваших задач:\n\n"
+                
+                for key, value in analysis.items():
+                    result_text += f"📋 {key.upper()}:\n"
+                    if isinstance(value, list):
+                        for item in value:
+                            result_text += f"  • {item}\n"
+                    else:
+                        result_text += f"  {value}\n"
+                    result_text += "\n"
+                
+                self.ai_results.setText(result_text)
+            except Exception as e:
+                self.ai_results.setText(f"❌ Ошибка анализа: {str(e)}")
+        
+        threading.Thread(target=analyze, daemon=True).start()
+    
+    def smart_scheduling(self):
+        """Умное планирование с ИИ"""
+        if not hasattr(self, 'ai_assistant') or not self.ai_assistant:
+            QMessageBox.warning(self, "Ошибка", "ИИ-помощник недоступен")
+            return
+        
+        self.ai_results.setText("🔄 Создаю оптимальное расписание...")
+        
+        tasks = task_manager.get_all_tasks()
+        if not tasks:
+            self.ai_results.setText("❌ Нет задач для планирования")
+            return
+        
+        tasks_data = [{"title": t.title, "description": t.description, "priority": t.priority.value} for t in tasks]
+        
+        import threading
+        def schedule():
+            try:
+                schedule_data = self.ai_assistant.suggest_time_blocks(tasks_data)
+                result_text = "⏰ Рекомендуемое расписание:\n\n"
+                
+                for block in schedule_data:
+                    result_text += f"🕐 {block.get('время_начала', 'N/A')} - {block.get('задача', 'N/A')}\n"
+                    result_text += f"   Продолжительность: {block.get('продолжительность', 'N/A')} мин\n"
+                    result_text += f"   💡 {block.get('обоснование', '')}\n\n"
+                
+                self.ai_results.setText(result_text)
+            except Exception as e:
+                self.ai_results.setText(f"❌ Ошибка планирования: {str(e)}")
+        
+        threading.Thread(target=schedule, daemon=True).start()
+    
+    def show_productivity_insights(self):
+        """Показать инсайты продуктивности"""
+        if not hasattr(self, 'ai_assistant') or not self.ai_assistant:
+            QMessageBox.warning(self, "Ошибка", "ИИ-помощник недоступен")
+            return
+        
+        self.ai_results.setText("🔄 Анализирую вашу продуктивность...")
+        
+        import threading
+        def get_insights():
+            try:
+                all_tasks = task_manager.get_all_tasks()
+                completed_tasks = [t for t in all_tasks if t.status == TaskStatus.COMPLETED]
+                
+                productivity_data = {
+                    "total_tasks": len(all_tasks),
+                    "completed_tasks": len(completed_tasks),
+                    "completion_rate": len(completed_tasks) / max(len(all_tasks), 1) * 100
+                }
+                
+                completed_data = [{"title": t.title, "completion_time": t.end_time.isoformat() if t.end_time else ""} for t in completed_tasks]
+                
+                insights = self.ai_assistant.productivity_insights(completed_data, productivity_data)
+                
+                result_text = "📊 Анализ продуктивности:\n\n"
+                for key, value in insights.items():
+                    result_text += f"📈 {key.upper().replace('_', ' ')}:\n"
+                    if isinstance(value, list):
+                        for item in value:
+                            result_text += f"  • {item}\n"
+                    else:
+                        result_text += f"  {value}\n"
+                    result_text += "\n"
+                
+                self.ai_results.setText(result_text)
+            except Exception as e:
+                self.ai_results.setText(f"❌ Ошибка анализа: {str(e)}")
+        
+        threading.Thread(target=get_insights, daemon=True).start()
+    
+    def open_ai_chat(self):
+        """Открыть чат с ИИ"""
+        if not hasattr(self, 'ai_assistant') or not self.ai_assistant:
+            QMessageBox.warning(self, "Ошибка", "ИИ-помощник недоступен")
+            return
+        
+        # Создаем простой диалог чата
+        from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QTextEdit
+        
+        chat_dialog = QDialog(self)
+        chat_dialog.setWindowTitle("💬 Чат с ИИ-помощником")
+        chat_dialog.setGeometry(200, 200, 600, 500)
+        
+        layout = QVBoxLayout()
+        
+        chat_area = QTextEdit()
+        chat_area.setReadOnly(True)
+        chat_area.append("🤖 ИИ-Помощник: Привет! Задавайте любые вопросы о планировании и продуктивности!")
+        layout.addWidget(chat_area)
+        
+        input_layout = QHBoxLayout()
+        message_input = QLineEdit()
+        message_input.setPlaceholderText("Введите ваше сообщение...")
+        send_button = QPushButton("Отправить")
+        
+        def send_message():
+            message = message_input.text().strip()
+            if not message:
+                return
+            
+            chat_area.append(f"👤 Вы: {message}")
+            message_input.clear()
+            
+            def get_response():
+                try:
+                    context = {"total_tasks": len(task_manager.get_all_tasks())}
+                    response = self.ai_assistant.chat_with_assistant(message, context)
+                    chat_area.append(f"🤖 ИИ-Помощник: {response}")
+                except Exception as e:
+                    chat_area.append(f"🤖 ИИ-Помощник: Извините, произошла ошибка: {str(e)}")
+            
+            import threading
+            threading.Thread(target=get_response, daemon=True).start()
+        
+        send_button.clicked.connect(send_message)
+        message_input.returnPressed.connect(send_message)
+        
+        input_layout.addWidget(message_input)
+        input_layout.addWidget(send_button)
+        layout.addLayout(input_layout)
+        
+        chat_dialog.setLayout(layout)
+        chat_dialog.exec_()
+    
+    def reset_ai_api(self):
+        """Сброс статуса API для повторной попытки подключения"""
+        if hasattr(self, 'ai_assistant') and self.ai_assistant:
+            self.ai_assistant.reset_api_status()
+            self.ai_results.setText("🔄 API статус сброшен. Попробуйте использовать ИИ-функции снова.")
+            QMessageBox.information(self, "Сброс API", "Статус API сброшен. Теперь система попробует переподключиться к OpenAI.")
+        else:
+            QMessageBox.warning(self, "Ошибка", "ИИ-помощник недоступен")
+    
+    # Методы для интеграций
+    def setup_slack_integration(self):
+        """Настройка интеграции со Slack"""
+        if not hasattr(self, 'integrations_manager'):
+            QMessageBox.warning(self, "Ошибка", "Менеджер интеграций недоступен")
+            return
+        
+        from PyQt5.QtWidgets import QInputDialog
+        
+        webhook_url, ok = QInputDialog.getText(self, "Настройка Slack", "Введите Webhook URL:")
+        if ok and webhook_url:
+            self.integrations_manager.setup_slack(webhook_url=webhook_url)
+            QMessageBox.information(self, "Успех", "Slack интеграция настроена!")
+            self.update_integrations_status()
+    
+    def setup_trello_integration(self):
+        """Настройка интеграции с Trello"""
+        if not hasattr(self, 'integrations_manager'):
+            QMessageBox.warning(self, "Ошибка", "Менеджер интеграций недоступен")
+            return
+        
+        from PyQt5.QtWidgets import QInputDialog
+        
+        api_key, ok1 = QInputDialog.getText(self, "Настройка Trello", "Введите API Key:")
+        if not ok1 or not api_key:
+            return
+        
+        token, ok2 = QInputDialog.getText(self, "Настройка Trello", "Введите Token:")
+        if ok2 and token:
+            self.integrations_manager.setup_trello(api_key, token)
+            QMessageBox.information(self, "Успех", "Trello интеграция настроена!")
+            self.update_integrations_status()
+    
+    def setup_notion_integration(self):
+        """Настройка интеграции с Notion"""
+        if not hasattr(self, 'integrations_manager'):
+            QMessageBox.warning(self, "Ошибка", "Менеджер интеграций недоступен")
+            return
+        
+        from PyQt5.QtWidgets import QInputDialog
+        
+        token, ok = QInputDialog.getText(self, "Настройка Notion", "Введите Integration Token:")
+        if ok and token:
+            self.integrations_manager.setup_notion(token)
+            QMessageBox.information(self, "Успех", "Notion интеграция настроена!")
+            self.update_integrations_status()
+    
+    def test_slack_notification(self):
+        """Тест уведомления Slack"""
+        if not hasattr(self, 'integrations_manager') or not self.integrations_manager.slack:
+            QMessageBox.warning(self, "Ошибка", "Slack не настроен")
+            return
+        
+        test_task = {
+            "title": "Тестовая задача",
+            "description": "Тест интеграции со Slack",
+            "priority": "high"
+        }
+        
+        success = self.integrations_manager.slack.send_task_notification(test_task)
+        if success:
+            QMessageBox.information(self, "Успех", "Тестовое уведомление отправлено!")
+        else:
+            QMessageBox.warning(self, "Ошибка", "Не удалось отправить уведомление")
+    
+    def sync_with_trello(self):
+        """Синхронизация с Trello"""
+        QMessageBox.information(self, "Информация", "Функция синхронизации с Trello в разработке")
+    
+    def sync_with_notion(self):
+        """Синхронизация с Notion"""
+        QMessageBox.information(self, "Информация", "Функция синхронизации с Notion в разработке")
+    
+    def update_integrations_status(self):
+        """Обновление статуса интеграций"""
+        if not hasattr(self, 'integrations_status'):
+            return
+        
+        status_text = "📊 Статус интеграций:\n\n"
+        
+        if hasattr(self, 'integrations_manager'):
+            if self.integrations_manager.slack:
+                status_text += "✅ Slack: Настроен\n"
+            else:
+                status_text += "❌ Slack: Не настроен\n"
+            
+            if self.integrations_manager.trello:
+                status_text += "✅ Trello: Настроен\n"
+            else:
+                status_text += "❌ Trello: Не настроен\n"
+            
+            if self.integrations_manager.notion:
+                status_text += "✅ Notion: Настроен\n"
+            else:
+                status_text += "❌ Notion: Не настроен\n"
+        else:
+            status_text += "❌ Менеджер интеграций недоступен\n"
+        
+        self.integrations_status.setText(status_text)
+    
+    def create_settings_tab(self):
+        """Создание вкладки настроек"""
+        settings_widget = QWidget()
+        layout = QVBoxLayout()
+        
+        # Заголовок
+        title = QLabel("⚙️ Настройки приложения")
+        title.setStyleSheet("font-size: 18px; font-weight: bold; padding: 10px;")
+        layout.addWidget(title)
+        
+        # Кнопка открытия настроек
+        open_settings_btn = QPushButton("🔧 Открыть настройки")
+        open_settings_btn.clicked.connect(self.open_modern_settings)
+        open_settings_btn.setStyleSheet("""
+            QPushButton {
+                font-size: 16px;
+                padding: 15px 30px;
+                margin: 20px;
+                min-height: 50px;
+            }
+        """)
+        layout.addWidget(open_settings_btn)
+        
+        # Информация о настройках
+        info_text = QLabel("""
+        <div style='padding: 20px; line-height: 1.6;'>
+            <h3>🌟 Доступные настройки:</h3>
+            <ul>
+                <li><b>🌐 Общие:</b> Язык интерфейса, тема оформления</li>
+                <li><b>🤖 ИИ-Помощник:</b> API ключи, модели, поведение</li>
+                <li><b>🔗 Интеграции:</b> Slack, Trello, Notion</li>
+                <li><b>ℹ️ О программе:</b> Информация о команде разработчиков</li>
+            </ul>
+            
+            <p><i>Настройки автоматически сохраняются и применяются при перезапуске приложения.</i></p>
+        </div>
+        """)
+        info_text.setWordWrap(True)
+        info_text.setStyleSheet("color: #CCCCCC; background: #2D2D2D; border-radius: 8px; padding: 15px;")
+        layout.addWidget(info_text)
+        
+        layout.addStretch()
+        
+        settings_widget.setLayout(layout)
+        return settings_widget
+    
+    def open_modern_settings(self):
+        """Открыть современные настройки"""
+        try:
+            from modern_settings import ModernSettingsDialog
+            dialog = ModernSettingsDialog(self)
+            if dialog.exec_() == QDialog.Accepted:
+                QMessageBox.information(self, "Настройки", "Настройки сохранены! Некоторые изменения требуют перезапуска приложения.")
+        except ImportError:
+            QMessageBox.warning(self, "Ошибка", "Модуль настроек не найден!")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось открыть настройки: {str(e)}")
 
 def main():
     """Главная функция с инициализацией всех улучшений"""
     app = QApplication(sys.argv)
     
-    print("🚀 Запуск улучшенного приложения Time Blocking v4.0...")
-    print("✅ Умные уведомления: активированы")
-    print("✅ Продвинутая аналитика: загружена")
-    print("✅ Drag & Drop интерфейс: готов")
-    print("✅ Облачная синхронизация: настроена")
-    print("✅ Оптимизация производительности: включена")
+    # Безопасный вывод для Windows консоли
+    try:
+        print("🚀 Запуск революционного приложения Time Blocking v5.0...")
+        print("✅ Умные уведомления: активированы")
+        print("✅ Продвинутая аналитика: загружена")
+        print("✅ Drag & Drop интерфейс: готов")
+        print("✅ Облачная синхронизация: настроена")
+        print("✅ Оптимизация производительности: включена")
+    except UnicodeEncodeError:
+        print("Запуск революционного приложения Time Blocking v5.0...")
+        print("Умные уведомления: активированы")
+        print("Продвинутая аналитика: загружена")
+        print("Drag & Drop интерфейс: готов")
+        print("Облачная синхронизация: настроена")
+        print("Оптимизация производительности: включена")
+    
+    if AI_MODULES_AVAILABLE:
+        try:
+            print("🤖 ИИ-помощник: активирован (OpenAI)")
+            print("🔗 Интеграции: Slack, Trello, Notion готовы")
+        except UnicodeEncodeError:
+            print("ИИ-помощник: активирован (OpenAI)")
+            print("Интеграции: Slack, Trello, Notion готовы")
+    else:
+        print("ИИ модули недоступны")
     
     # Создаем и показываем приложение
     window = HybridTimeBlockingApp()
     window.show()
     
-    print("🎉 Приложение успешно запущено!")
-    print("📊 Новые функции:")
+    try:
+        print("🎉 Приложение успешно запущено!")
+        print("📊 Функции v4.0:")
+    except UnicodeEncodeError:
+        print("Приложение успешно запущено!")
+        print("Функции v4.0:")
+    
     print("   - Тепловая карта продуктивности")
     print("   - Адаптивные уведомления")
     print("   - Персональные инсайты")
     print("   - Экспорт данных")
     print("   - Улучшенный UI с анимациями")
+    
+    if AI_MODULES_AVAILABLE:
+        try:
+            print("🆕 Новые функции v5.0:")
+            print("   - 🤖 ИИ-помощник для планирования")
+            print("   - 📊 Анализ задач с помощью ИИ")
+            print("   - ⏰ Умное планирование расписания")
+            print("   - 💬 Чат с ИИ-консультантом")
+            print("   - 🔗 Интеграция со Slack")
+            print("   - 📋 Интеграция с Trello")
+            print("   - 📝 Интеграция с Notion")
+        except UnicodeEncodeError:
+            print("Новые функции v5.0:")
+            print("   - ИИ-помощник для планирования")
+            print("   - Анализ задач с помощью ИИ")
+            print("   - Умное планирование расписания")
+            print("   - Чат с ИИ-консультантом")
+            print("   - Интеграция со Slack")
+            print("   - Интеграция с Trello")
+            print("   - Интеграция с Notion")
     
     sys.exit(app.exec_())
 

@@ -1,19 +1,18 @@
-# settings.py - Система настроек премиум-класса
 import json
 import os
+import sys
 from datetime import datetime
-from PyQt5.QtCore import QSettings, QStandardPaths
+from PyQt5.QtCore import QSettings, QStandardPaths, Qt, pyqtSignal
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, 
                              QGroupBox, QCheckBox, QComboBox, QSpinBox, 
                              QDoubleSpinBox, QLineEdit, QPushButton, 
                              QDialogButtonBox, QLabel, QTabWidget, QWidget,
-                             QListWidget, QListWidgetItem, QScrollArea, QSlider, QMessageBox, QFileDialog)
-from PyQt5.QtGui import QIcon, QFont, QPalette, QColor
-from PyQt5.QtCore import Qt, pyqtSignal
+                             QListWidget, QListWidgetItem, QScrollArea, QSlider, 
+                             QMessageBox, QFileDialog, QTextEdit, QFrame)
+from PyQt5.QtGui import QIcon, QFont, QPalette, QColor, QPixmap
 
 class AppSettings:
     """Класс для управления настройками приложения"""
-    
     def __init__(self, app_name="TimeBlockingPlanner"):
         self.app_name = app_name
         self.settings = QSettings("PremiumSoft", app_name)
@@ -22,50 +21,124 @@ class AppSettings:
     def get_default_settings(self):
         """Возвращает настройки по умолчанию"""
         return {
+            "general": {
+                "language": "ru",  # ru, en, de
+                "theme": "dark",   # dark, light, auto
+                "first_run": True,
+                "window_geometry": "",
+                "window_state": ""
+            },
+            
             "appearance": {
-                "theme": "dark",
-                "language": "ru",
-                "font_size": 12,
                 "font_family": "Segoe UI",
+                "font_size": 12,
+                "ui_scale": 1.0,
                 "animations_enabled": True,
                 "smooth_scrolling": True,
-                "opacity": 1.0
+                "window_opacity": 1.0,
+                "accent_color": "#FF2B43",
+                "show_tooltips": True
             },
+            
             "notifications": {
                 "enabled": True,
                 "sound_enabled": True,
                 "popup_enabled": True,
-                "early_minutes": 2,
-                "snooze_minutes": 5,
-                "working_hours_start": "08:00",
-                "working_hours_end": "22:00"
+                "system_tray": True,
+                "reminder_minutes": 5,
+                "snooze_minutes": 10,
+                "working_hours_start": "09:00",
+                "working_hours_end": "18:00",
+                "weekend_notifications": False
             },
+            
             "behavior": {
                 "auto_save": True,
-                "auto_save_interval": 5,
+                "auto_save_interval": 3,
                 "minimize_to_tray": True,
                 "start_minimized": False,
+                "start_with_system": False,
                 "confirm_deletions": True,
-                "backup_on_start": True
+                "backup_enabled": True,
+                "backup_interval": 24,
+                "close_to_tray": True
             },
-            "time_blocks": {
-                "default_duration": 60,
-                "default_color": "#FF2B43",
-                "show_duration": True,
-                "allow_overlap": False,
-                "snap_to_grid": True,
-                "grid_size": 15
+            
+            "planning": {
+                "default_task_duration": 60,
+                "default_break_duration": 15,
+                "work_day_start": "09:00",
+                "work_day_end": "18:00",
+                "lunch_break_start": "13:00",
+                "lunch_break_duration": 60,
+                "auto_schedule": True,
+                "smart_breaks": True,
+                "pomodoro_enabled": False,
+                "pomodoro_work_minutes": 25,
+                "pomodoro_break_minutes": 5
             },
-            "integration": {
-                "calendar_sync": False,
-                "export_format": "json",
+            
+            "ai_assistant": {
+                "enabled": True,
+                "provider": "openai",  # openai, deepseek, offline
+                "openai_api_key": "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",
+                "deepseek_api_key": "",
+                "model": "gpt-3.5-turbo",
+                "max_tokens": 1000,
+                "temperature": 0.7,
+                "auto_analyze": True,
+                "smart_suggestions": True,
+                "chat_history_limit": 100,
+                "context_aware": True,
+                "learning_mode": True
+            },
+            
+            "integrations": {
+                # Slack
+                "slack_enabled": False,
+                "slack_webhook_url": "",
+                "slack_bot_token": "",
+                "slack_channel": "#general",
+                "slack_notify_on_complete": True,
+                
+                # Trello
+                "trello_enabled": False,
+                "trello_api_key": "",
+                "trello_token": "",
+                "trello_board_id": "",
+                "trello_list_id": "",
+                "trello_auto_sync": True,
+                
+                # Notion
+                "notion_enabled": False,
+                "notion_token": "",
+                "notion_database_id": "",
+                "notion_auto_create": True,
+                
+                # Общие настройки интеграций
+                "sync_interval": 15,  # минуты
+                "auto_sync": True,
+                "sync_on_startup": True,
+                "conflict_resolution": "ask"  # ask, local, remote
+            },
+            
+            "export": {
+                "default_format": "json",
+                "include_completed": True,
+                "include_analytics": False,
                 "auto_export": False,
-                "cloud_sync": False
+                "export_path": "",
+                "cloud_backup": False,
+                "dropbox_token": ""
             },
+            
             "privacy": {
-                "analytics": False,
+                "analytics_enabled": False,
                 "crash_reports": True,
-                "auto_update": True
+                "usage_statistics": False,
+                "auto_update": True,
+                "data_encryption": False,
+                "secure_api_keys": True
             }
         }
     
@@ -165,12 +238,12 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.tab_widget)
         
         # Создаем вкладки
+        self.create_general_tab()
         self.create_appearance_tab()
+        self.create_ai_tab()
+        self.create_integrations_tab()
         self.create_notifications_tab()
-        self.create_behavior_tab()
-        self.create_blocks_tab()
-        self.create_integration_tab()
-        self.create_privacy_tab()
+        self.create_about_tab()
         
         # Кнопки
         button_layout = QHBoxLayout()

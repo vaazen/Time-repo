@@ -13,3 +13,7 @@ requests>=2.25.0
 dropbox>=11.0.0
 openpyxl>=3.0.0
 reportlab>=3.6.0
+
+# Новые зависимости для v5.0 - ИИ и интеграции
+# requests>=2.25.0  # Уже указан выше
+# threading, json, logging - встроенные модули Python, не требуют установки
