@@ -98,15 +98,6 @@ class TaskManager:
         """Получение локального времени"""
         return datetime.now()
     
-    def add_task(self, task: Task):
-        """Добавление готовой задачи"""
-        self.tasks.append(task)
-        self.save_tasks()
-    
-    def get_all_tasks(self) -> List[Task]:
-        """Получение всех задач"""
-        return self.tasks.copy()
-    
     def create_task(self, title: str, description: str, start_time: datetime, 
                    end_time: datetime, priority: TaskPriority = TaskPriority.MEDIUM) -> Task:
         """Создание новой задачи"""

@@ -203,9 +203,9 @@ Time-blocking/
 ## 🤝 Обратная связь
 
 Нашли баг или есть идея для улучшения? 
-- 📧 Email: kostybaz@gmail.com
-- 🐛 GitHub Issues: [Создать issue](https://github.com/vaazen)
-- 💬 Telegram: @vaazen
+- 📧 Email: support@timeblocking.app
+- 🐛 GitHub Issues: [Создать issue](https://github.com/your-repo/issues)
+- 💬 Telegram: @timeblocking_support
 
 ---
 
