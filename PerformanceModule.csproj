@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DllExport" Version="1.7.4" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <PostBuildEvent>
+      copy "$(TargetPath)" "$(ProjectDir)PerformanceModule.dll"
+    </PostBuildEvent>
+  </PropertyGroup>
+
+</Project>
