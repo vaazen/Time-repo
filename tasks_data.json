@@ -7,11 +7,23 @@
       "start_time": "2025-10-03T23:22:00",
       "end_time": "2025-10-04T03:28:00",
       "priority": "high",
-      "status": "planned",
+      "status": "completed",
       "created_at": "2025-10-03T23:22:35.222560",
-      "updated_at": "2025-10-03T23:22:46.378868",
+      "updated_at": "2025-10-03T23:54:21.337530",
+      "completed_at": "2025-10-03T23:54:21.337530"
+    },
+    {
+      "id": "d1fe7612-803b-4e64-967f-7522f77465f0",
+      "title": "тест",
+      "description": "",
+      "start_time": "2025-10-04T00:41:08.265000",
+      "end_time": "2025-10-04T01:41:08.266000",
+      "priority": "medium",
+      "status": "planned",
+      "created_at": "2025-10-04T00:41:11.760584",
+      "updated_at": "2025-10-04T00:41:11.760584",
       "completed_at": null
     }
   ],
-  "saved_at": "2025-10-03T23:22:46.378989"
+  "saved_at": "2025-10-04T00:41:11.760584"
 }

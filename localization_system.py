@@ -8,15 +8,37 @@ class LocalizationManager:
     """Менеджер локализации для многоязычного интерфейса"""
     
     def __init__(self):
-        self.current_language = "ru"
+        self.current_language = self.load_saved_language()
         self.supported_languages = {
             "ru": "Русский",
             "en": "English", 
-            "de": "Deutsch"
+            "de": "Deutsch",
+            "fr": "Français",
+            "es": "Español"
         }
         self.translations = self.load_translations()
-        
-        # Используем локальное время системы
+    
+    def load_saved_language(self):
+        """Загрузка сохраненного языка из настроек"""
+        try:
+            from PyQt5.QtCore import QSettings
+            settings = QSettings("TimeBlocking", "v5.0")
+            saved_lang = settings.value("general/language", "ru")
+            return saved_lang if saved_lang in ["ru", "en", "de", "fr", "es"] else "ru"
+        except:
+            return "ru"
+    
+    def set_language(self, language_code):
+        """Установка языка и сохранение в настройки"""
+        if language_code in self.supported_languages:
+            self.current_language = language_code
+            try:
+                from PyQt5.QtCore import QSettings
+                settings = QSettings("TimeBlocking", "v5.0")
+                settings.setValue("general/language", language_code)
+                settings.sync()
+            except:
+                pass
     
     def load_translations(self) -> Dict[str, Dict[str, str]]:
         """Загрузка переводов для всех языков"""
@@ -85,7 +107,13 @@ class LocalizationManager:
                 # Вкладки
                 "tab_dashboard": "Панель",
                 "tab_tasks": "Задачи", 
-                "tab_performance": "Производительность"
+                "tab_performance": "Производительность",
+                
+                # Новые элементы v5.0
+                "ai_assistant": "ИИ-Помощник",
+                "integrations": "Интеграции",
+                "settings_saved": "Настройки сохранены! Некоторые изменения требуют перезапуска приложения.",
+                "error": "Ошибка"
             },
             
             "en": {
@@ -152,7 +180,13 @@ class LocalizationManager:
                 # Tabs
                 "tab_dashboard": "Dashboard",
                 "tab_tasks": "Tasks",
-                "tab_performance": "Performance"
+                "tab_performance": "Performance",
+                
+                # New elements v5.0
+                "ai_assistant": "AI Assistant",
+                "integrations": "Integrations",
+                "settings_saved": "Settings saved! Some changes require application restart.",
+                "error": "Error"
             },
             
             "de": {
@@ -211,15 +245,6 @@ class LocalizationManager:
                 
                 # Schaltflächen und Aktionen
                 "process_rust": "Verarbeiten (Rust)",
-                "calculate_cpp": "Berechnen (C++)",
-                "performance_test": "Leistungstest",
-                "language": "Sprache",
-                "settings": "Einstellungen",
-                
-                # Registerkarten
-                "tab_dashboard": "Dashboard",
-                "tab_tasks": "Aufgaben",
-                "tab_performance": "Leistung"
             }
         }
     
@@ -237,12 +262,6 @@ class LocalizationManager:
         
         return text
     
-    def set_language(self, lang_code: str) -> bool:
-        """Установка языка"""
-        if lang_code in self.supported_languages:
-            self.current_language = lang_code
-            return True
-        return False
     
     def get_moscow_time(self) -> datetime:
         """Получение московского времени"""

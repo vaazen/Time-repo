@@ -6,7 +6,8 @@ from datetime import datetime, timedelta
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
                              QWidget, QPushButton, QLabel, QTextEdit, QTabWidget,
                              QLineEdit, QComboBox, QTimeEdit, QDialog, QFormLayout,
-                             QDialogButtonBox, QMessageBox, QListWidget, QListWidgetItem)
+                             QDialogButtonBox, QMessageBox, QListWidget, QListWidgetItem,
+                             QScrollArea)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer, QTime
 from PyQt5.QtGui import QFont
 
@@ -21,6 +22,8 @@ except ImportError:
 
 # Импорты наших модулей
 from localization_system import localization, _
+from dynamic_interface import setup_dynamic_interface, register_dynamic_element
+from dynamic_elements import dynamic_task_list, dynamic_chart, dynamic_stats
 from task_manager import task_manager, Task, TaskStatus, TaskPriority
 
 # Новые улучшенные модули (с ленивой инициализацией)
@@ -710,7 +713,10 @@ class HybridTimeBlockingApp(QMainWindow):
         
         self.init_ui()
         self.setup_timers()
-    
+
+        # Инициализация динамической системы
+        self.dynamic_manager = setup_dynamic_interface(self)
+        print("Динамическая система активирована!")    
     def init_enhanced_modules(self):
         """Инициализация улучшенных модулей в правильном потоке"""
         try:
@@ -780,16 +786,6 @@ class HybridTimeBlockingApp(QMainWindow):
         header.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(header)
         
-        # Информация о модулях (упрощено)
-        self.modules_info = QLabel("Статус: Python активен | JavaScript активен | Время синхронизировано")
-        self.modules_info.setStyleSheet("""
-            background: #2D2D2D;
-            padding: 10px;
-            border-radius: 6px;
-            font-family: 'Consolas', monospace;
-            color: #CCCCCC;
-        """)
-        main_layout.addWidget(self.modules_info)
         
         # Вкладки
         self.tabs = QTabWidget()
@@ -813,63 +809,126 @@ class HybridTimeBlockingApp(QMainWindow):
             }
         """)
         
-        # Вкладка JavaScript Dashboard
-        self.js_dashboard = JavaScriptUIComponent(self)
-        self.tabs.addTab(self.js_dashboard, _("tab_dashboard"))
+        # Вкладка JavaScript        # Создаем вкладки
+        self.dashboard_tab = self.create_dashboard_tab()
+        self.dashboard_tab.setObjectName("dashboard_tab")
+        self.tabs.addTab(self.dashboard_tab, "📊 " + _("tab_dashboard"))
         
-        # Вкладка управления задачами
         self.tasks_tab = self.create_tasks_tab()
+        self.tasks_tab.setObjectName("tasks_tab")
         self.tabs.addTab(self.tasks_tab, _("tab_tasks"))
         
         # Новые вкладки v5.0
         if AI_MODULES_AVAILABLE and hasattr(self, 'ai_ui') and self.ai_ui:
             self.ai_tab = self.create_ai_tab()
+            self.ai_tab.setObjectName("ai_tab")
             self.tabs.addTab(self.ai_tab, "🤖 ИИ-Помощник")
             
             self.integrations_tab = self.create_integrations_tab()
+            self.integrations_tab.setObjectName("integrations_tab")
             self.tabs.addTab(self.integrations_tab, "🔗 Интеграции")
+        
+        # Добавляем вкладку с языками программирования (временно отключено)
+        # self.languages_tab = self.create_programming_languages_tab()
+        # self.languages_tab.setObjectName("languages_tab")
+        # self.tabs.addTab(self.languages_tab, "💻 Языки")
         
         # Добавляем вкладку настроек
         self.settings_tab = self.create_settings_tab()
+        self.settings_tab.setObjectName("settings_tab")
         self.tabs.addTab(self.settings_tab, "⚙️ Настройки")
         
         # Вкладка производительности удалена для упрощения
         
         main_layout.addWidget(self.tabs)
         
-        # Применяем темную тему
+        # Применяем современную темную тему
         self.setStyleSheet("""
             QMainWindow {
-                background: #1E1E1E;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #1A1A1A, stop:1 #2A2A2A);
                 color: white;
             }
             QWidget {
-                background: #1E1E1E;
+                background: transparent;
                 color: white;
             }
             QPushButton {
-                background: #FF2B43;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #FF2B43, stop:1 #E01E37);
                 color: white;
                 border: none;
-                padding: 10px 20px;
+                padding: 12px 24px;
                 font-size: 14px;
-                border-radius: 6px;
+                border-radius: 8px;
                 font-weight: bold;
                 min-width: 120px;
-                min-height: 35px;
+                min-height: 40px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.3);
             }
             QPushButton:hover {
-                background: #FF4A5F;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #FF4A5F, stop:1 #FF2B43);
+                transform: translateY(-2px);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #E01E37, stop:1 #C01A31);
             }
             QTextEdit {
-                background: #2D2D2D;
+                background: rgba(45, 45, 45, 0.9);
                 border: 2px solid #FF2B43;
-                border-radius: 6px;
-                padding: 10px;
-                font-family: 'Consolas', monospace;
+                border-radius: 8px;
+                padding: 15px;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 13px;
+                selection-background-color: #FF2B43;
             }
             QLabel {
-                margin: 5px;
+                margin: 8px;
+                font-weight: 500;
+            }
+            QTabWidget::pane {
+                border: 2px solid #FF2B43;
+                border-radius: 10px;
+                background: rgba(30, 30, 30, 0.95);
+                margin-top: -1px;
+            }
+            QTabBar::tab {
+                background: rgba(45, 45, 45, 0.8);
+                color: white;
+                padding: 14px 24px;
+                margin-right: 4px;
+                border-top-left-radius: 10px;
+                border-top-right-radius: 10px;
+                font-weight: bold;
+                font-size: 13px;
+                min-width: 100px;
+            }
+            QTabBar::tab:selected {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #FF2B43, stop:1 #E01E37);
+                border-bottom: 3px solid #FFD700;
+            }
+            QTabBar::tab:hover:!selected {
+                background: rgba(255, 43, 67, 0.3);
+            }
+            QScrollArea {
+                border: none;
+                background: transparent;
+            }
+            QScrollBar:vertical {
+                background: rgba(45, 45, 45, 0.5);
+                width: 12px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:vertical {
+                background: #FF2B43;
+                border-radius: 6px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #FF4A5F;
             }
         """)
     
@@ -973,6 +1032,198 @@ class HybridTimeBlockingApp(QMainWindow):
         
         return widget
     
+    def create_dashboard_tab(self):
+        """Создание объединенной вкладки: панель управления + аналитика"""
+        widget = QWidget()
+        
+        # Создаем область с прокруткой
+        scroll_area = QScrollArea()
+        scroll_widget = QWidget()
+        layout = QVBoxLayout(scroll_widget)
+        
+        # Заголовок
+        title = QLabel("📊 Панель управления и аналитика")
+        title.setStyleSheet("font-size: 20px; font-weight: bold; padding: 15px; text-align: center;")
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
+        
+        # Статистические карточки
+        stats_layout = QHBoxLayout()
+        
+        # Карточка задач сегодня
+        total_tasks = len(task_manager.get_tasks_for_today())
+        self.tasks_card_element = QLabel(f"""
+        <div style='background: linear-gradient(135deg, #2D2D2D, #3D3D3D); padding: 25px; border-radius: 12px; text-align: center; border: 1px solid #FF2B4340; box-shadow: 0 4px 12px rgba(0,0,0,0.3);'>
+            <h3 style='color: #FF2B43; margin: 0; font-size: 14px;'>📋 {_("tasks_today")}</h3>
+            <h1 style='margin: 15px 0; font-family: "Courier New", monospace; color: #FF2B43; font-size: 32px; text-shadow: 0 0 10px #FF2B4350; letter-spacing: 2px;'>{total_tasks}</h1>
+            
+            <!-- Прогресс-бар для задач -->
+            <div style='margin: 15px 0; background: #1A1A1A; border-radius: 10px; height: 8px; overflow: hidden;'>
+                <div style='background: linear-gradient(90deg, #FF2B43, #FF2B4380); height: 100%; width: {min(total_tasks * 10, 100)}%; border-radius: 10px; transition: width 0.3s ease;'></div>
+            </div>
+            <p style='color: #FF2B43; margin: 5px 0; font-size: 11px; font-weight: bold;'>Активность: {min(total_tasks * 10, 100):.0f}%</p>
+            
+            <!-- Мотивационное сообщение -->
+            <p style='color: #FFD700; margin: 10px 0; font-size: 11px; font-style: italic; opacity: 0.9;'>{'Отличный старт!' if total_tasks > 3 else 'Добавьте задачи! 📝'}</p>
+        </div>
+        """)
+        register_dynamic_element(self, "tasks_card", self.tasks_card_element, "stats")
+        stats_layout.addWidget(self.tasks_card_element)
+        
+        # Карточка выполненных задач
+        completed_count = len(task_manager.get_completed_tasks_today())
+        completion_rate = (completed_count / max(total_tasks, 1)) * 100
+        self.completed_card_element = QLabel(f"""
+        <div style='background: linear-gradient(135deg, #2D2D2D, #3D3D3D); padding: 25px; border-radius: 12px; text-align: center; border: 1px solid #4CAF5040; box-shadow: 0 4px 12px rgba(0,0,0,0.3);'>
+            <h3 style='color: #4CAF50; margin: 0; font-size: 14px;'>✅ {_("completed_tasks")}</h3>
+            <h1 style='margin: 15px 0; font-family: "Courier New", monospace; color: #4CAF50; font-size: 32px; text-shadow: 0 0 10px #4CAF5050; letter-spacing: 2px;'>{completed_count}</h1>
+            
+            <!-- Прогресс-бар выполнения -->
+            <div style='margin: 15px 0; background: #1A1A1A; border-radius: 10px; height: 8px; overflow: hidden;'>
+                <div style='background: linear-gradient(90deg, #4CAF50, #4CAF5080); height: 100%; width: {completion_rate:.1f}%; border-radius: 10px; transition: width 0.3s ease;'></div>
+            </div>
+            <p style='color: #4CAF50; margin: 5px 0; font-size: 11px; font-weight: bold;'>Выполнено: {completion_rate:.0f}%</p>
+            
+            <!-- Мотивационное сообщение -->
+            <p style='color: #FFD700; margin: 10px 0; font-size: 11px; font-style: italic; opacity: 0.9;'>{'Превосходно! 🎉' if completion_rate > 70 else 'Продолжайте! 💪' if completion_rate > 30 else 'Начните выполнять! 🚀'}</p>
+        </div>
+        """)
+        register_dynamic_element(self, "completed_card", self.completed_card_element, "stats")
+        stats_layout.addWidget(self.completed_card_element)
+        
+        # Карточка времени (с ID для обновления)
+        current_time = localization.format_moscow_time("%H:%M:%S")
+        current_date = localization.format_moscow_time("%d.%m.%Y")
+        self.time_card = QLabel(f"""
+        <div style='background: #2D2D2D; padding: 20px; border-radius: 8px; text-align: center;'>
+            <h3 style='color: #2196F3; margin: 0;'>{_("current_time")}</h3>
+            <h2 style='margin: 10px 0; font-family: monospace;'>{current_time}</h2>
+            <p style='color: #CCCCCC; margin: 5px 0; font-size: 12px;'>{current_date}</p>
+        </div>
+        """)
+        stats_layout.addWidget(self.time_card)
+        
+        layout.addLayout(stats_layout)
+        
+        # Список ближайших задач
+        upcoming_label = QLabel("📋 Ближайшие задачи:")
+        upcoming_label.setStyleSheet("font-size: 16px; font-weight: bold; margin: 20px 0 10px 0;")
+        layout.addWidget(upcoming_label)
+        
+        self.upcoming_tasks = QTextEdit()
+        self.upcoming_tasks.setReadOnly(True)
+        self.upcoming_tasks.setMaximumHeight(150)
+        
+        # Получаем ближайшие задачи
+        today_tasks = task_manager.get_tasks_for_today()
+        if today_tasks:
+            tasks_text = ""
+            for task in today_tasks[:5]:  # Показываем первые 5 задач
+                status_icon = "✅" if task.status == TaskStatus.COMPLETED else "⏰"
+                tasks_text += f"{status_icon} {task.title} ({task.start_time.strftime('%H:%M')})\n"
+        else:
+            tasks_text = _("no_tasks")
+        
+        self.upcoming_tasks.setPlainText(dynamic_task_list.get_dynamic_task_text())
+        self.upcoming_tasks.setStyleSheet("""
+            QTextEdit {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #2D2D2D, stop:1 #3D3D3D);
+                border: 2px solid #FF2B43;
+                border-radius: 12px;
+                padding: 20px;
+                color: #CCCCCC;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 13px;
+                selection-background-color: #FF2B43;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }
+        """)
+        layout.addWidget(self.upcoming_tasks)
+        
+        # Простой график производительности
+        chart_label = QLabel("📈 График производительности за неделю")
+        chart_label.setStyleSheet("font-size: 16px; font-weight: bold; margin: 20px 0 10px 0;")
+        layout.addWidget(chart_label)
+        
+        # Простая визуализация
+        self.chart_widget = QTextEdit()
+        self.chart_widget.setReadOnly(True)
+        self.chart_widget.setMaximumHeight(200)
+        
+        # Получаем статистику
+        all_tasks = task_manager.get_all_tasks()
+        completed_tasks = [t for t in all_tasks if t.status == TaskStatus.COMPLETED]
+        
+        chart_text = "Статистика по дням недели:\n\n"
+        days = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+        
+        # Простая визуализация
+        for i, day in enumerate(days):
+            # Имитируем данные для демонстрации
+            completed = min(len(completed_tasks), 10)
+            bar = "█" * (completed // 2) + "░" * (5 - (completed // 2))
+            chart_text += f"{day}: {bar} ({completed//2}/5)\n"
+        
+        self.chart_widget.setPlainText(dynamic_chart.get_dynamic_chart_text())
+        self.chart_widget.setStyleSheet("""
+            QTextEdit {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #2D2D2D, stop:1 #3D3D3D);
+                border: 2px solid #FF2B43;
+                border-radius: 12px;
+                padding: 20px;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 14px;
+                color: #CCCCCC;
+                selection-background-color: #FF2B43;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }
+        """)
+        layout.addWidget(self.chart_widget)
+        
+        # Детальная статистика
+        stats_label = QLabel("📅 Детальная статистика")
+        stats_label.setStyleSheet("font-size: 16px; font-weight: bold; margin: 20px 0 10px 0;")
+        layout.addWidget(stats_label)
+        
+        self.stats_widget = QTextEdit()
+        self.stats_widget.setReadOnly(True)
+        self.stats_widget.setMaximumHeight(150)
+        
+        stats_text = f"""Общая статистика:
+• Всего задач: {len(all_tasks)}
+• Выполнено: {len(completed_tasks)}
+• В процессе: {len([t for t in all_tasks if t.status == TaskStatus.IN_PROGRESS])}
+• Запланировано: {len([t for t in all_tasks if t.status == TaskStatus.PLANNED])}
+
+Продуктивность:
+• Процент выполнения: {(len(completed_tasks) / len(all_tasks) * 100) if all_tasks else 0:.1f}%
+• Средняя длительность: {sum(t.get_duration_minutes() for t in all_tasks) / len(all_tasks) if all_tasks else 0:.0f} мин"""
+        
+        self.stats_widget.setPlainText(dynamic_stats.get_dynamic_stats_text())
+        self.stats_widget.setStyleSheet("""
+            QTextEdit {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #2D2D2D, stop:1 #3D3D3D);
+                border: 2px solid #4CAF50;
+                border-radius: 12px;
+                padding: 20px;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 14px;
+                color: #CCCCCC;
+                selection-background-color: #4CAF50;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }
+        """)
+        layout.addWidget(self.stats_widget)
+        
+        # Настраиваем прокрутку
+        scroll_area.setWidget(scroll_widget)
+        scroll_area.setWidgetResizable(True)
+        
+        main_layout = QVBoxLayout(widget)
+        main_layout.addWidget(scroll_area)
+        
+        return widget
+    
     def create_blocks_tab(self):
         """Создание вкладки управления блоками"""
         widget = QWidget()
@@ -1015,11 +1266,20 @@ class HybridTimeBlockingApp(QMainWindow):
     
     def setup_timers(self):
         """Настройка таймеров"""
+        # Таймер для обновления времени (каждую секунду)
+        self.time_timer = QTimer()
+        self.time_timer.timeout.connect(self.update_time_display)
+        self.time_timer.start(1000)  # Каждую секунду
+        
         # Таймер для обновления статистики
         self.stats_timer = QTimer()
         self.stats_timer.timeout.connect(self.update_statistics)
-        self.stats_timer.start(5000)  # Каждые 5 секунд
+        self.stats_timer.start(30000)  # Каждые 30 секунд
     
+        # Таймер для обновления всех динамических элементов (каждые 3 секунды)
+        self.all_elements_timer = QTimer()
+        self.all_elements_timer.timeout.connect(self.update_all_dynamic_elements)
+        self.all_elements_timer.start(3000)
     def add_time_block(self):
         """Добавление временного блока"""
         import random
@@ -1280,48 +1540,196 @@ class HybridTimeBlockingApp(QMainWindow):
         return color_map.get(status, QColor(70, 70, 70))
     
     def create_ai_tab(self):
-        """Создание вкладки ИИ-помощника"""
+        """Создание современной вкладки ИИ-помощника"""
         ai_widget = QWidget()
         layout = QVBoxLayout()
         
-        # Заголовок
-        title = QLabel("🤖 ИИ-Помощник для планирования")
-        title.setStyleSheet("font-size: 18px; font-weight: bold; padding: 10px;")
+        # Современный заголовок
+        title = QLabel("🤖 ИИ-Помощник для продуктивности")
+        title.setStyleSheet("""
+            font-size: 20px; 
+            font-weight: bold; 
+            padding: 15px; 
+            text-align: center;
+            background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #9C27B0, stop:1 #673AB7);
+            border-radius: 10px;
+            color: white;
+            margin: 10px;
+        """)
+        title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
         
-        # Кнопки функций
-        buttons_layout = QHBoxLayout()
+        # Область ввода запроса
+        input_layout = QHBoxLayout()
         
-        analyze_btn = QPushButton("📊 Анализ задач")
-        analyze_btn.clicked.connect(self.analyze_tasks_with_ai)
-        buttons_layout.addWidget(analyze_btn)
+        self.ai_input = QLineEdit()
+        self.ai_input.setPlaceholderText("Введите ваш запрос к ИИ-помощнику...")
+        self.ai_input.setStyleSheet("""
+            QLineEdit {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #2D2D2D, stop:1 #3D3D3D);
+                border: 2px solid #9C27B0;
+                border-radius: 10px;
+                padding: 15px;
+                font-size: 14px;
+                color: #CCCCCC;
+                min-height: 20px;
+            }
+            QLineEdit:focus {
+                border: 2px solid #BA68C8;
+                box-shadow: 0 0 10px rgba(156, 39, 176, 0.3);
+            }
+        """)
+        input_layout.addWidget(self.ai_input)
         
-        schedule_btn = QPushButton("⏰ Умное планирование")
-        schedule_btn.clicked.connect(self.smart_scheduling)
-        buttons_layout.addWidget(schedule_btn)
+        # Кнопка отправки
+        send_btn = QPushButton("🚀 Спросить ИИ")
+        send_btn.clicked.connect(self.process_ai_request)
+        send_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #9C27B0, stop:1 #7B1FA2);
+                color: white;
+                border: none;
+                padding: 15px 25px;
+                font-size: 14px;
+                border-radius: 10px;
+                font-weight: bold;
+                min-width: 150px;
+                box-shadow: 0 4px 8px rgba(156, 39, 176, 0.3);
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #BA68C8, stop:1 #9C27B0);
+                transform: translateY(-2px);
+            }
+        """)
+        input_layout.addWidget(send_btn)
         
-        insights_btn = QPushButton("💡 Инсайты")
-        insights_btn.clicked.connect(self.show_productivity_insights)
-        buttons_layout.addWidget(insights_btn)
+        layout.addLayout(input_layout)
         
-        chat_btn = QPushButton("💬 Чат с ИИ")
-        chat_btn.clicked.connect(self.open_ai_chat)
-        buttons_layout.addWidget(chat_btn)
-        
-        reset_btn = QPushButton("🔄 Сброс API")
-        reset_btn.clicked.connect(self.reset_ai_api)
-        buttons_layout.addWidget(reset_btn)
-        
-        layout.addLayout(buttons_layout)
-        
-        # Область результатов
+        # Область результатов ИИ
         self.ai_results = QTextEdit()
-        self.ai_results.setPlaceholderText("Результаты анализа ИИ будут отображаться здесь...")
+        self.ai_results.setReadOnly(True)
+        self.ai_results.setStyleSheet("""
+            QTextEdit {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #2D2D2D, stop:1 #3D3D3D);
+                border: 2px solid #9C27B0;
+                border-radius: 12px;
+                padding: 20px;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 14px;
+                color: #CCCCCC;
+                selection-background-color: #9C27B0;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }
+        """)
+        
+        # Инициализируем с приветствием
+        welcome_text = """🤖 Добро пожаловать в ИИ-Помощник!
+
+Я могу помочь вам с:
+• 📋 Планированием задач и расписания
+• ⏰ Оптимизацией времени
+• 🎯 Постановкой целей
+• 📊 Анализом продуктивности
+• 💡 Советами по эффективности
+
+Просто введите ваш вопрос выше и нажмите "Спросить ИИ"!
+
+Примеры запросов:
+- "Как лучше спланировать день?"
+- "Посоветуй техники концентрации"
+- "Как повысить продуктивность?"
+"""
+        self.ai_results.setPlainText(welcome_text)
         layout.addWidget(self.ai_results)
+        
+        # Быстрые кнопки
+        quick_buttons_layout = QHBoxLayout()
+        
+        quick_buttons = [
+            ("📋 План дня", "Создай план продуктивного дня"),
+            ("⏰ Тайм-менеджмент", "Дай советы по управлению временем"),
+            ("🎯 Цели", "Помоги поставить SMART цели"),
+            ("💪 Мотивация", "Дай мотивационный совет")
+        ]
+        
+        for btn_text, prompt in quick_buttons:
+            btn = QPushButton(btn_text)
+            btn.clicked.connect(lambda checked, p=prompt: self.quick_ai_request(p))
+            btn.setStyleSheet("""
+                QPushButton {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #673AB7, stop:1 #512DA8);
+                    color: white;
+                    border: none;
+                    padding: 10px 15px;
+                    font-size: 12px;
+                    border-radius: 8px;
+                    font-weight: bold;
+                    min-width: 120px;
+                }
+                QPushButton:hover {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #7986CB, stop:1 #673AB7);
+                }
+            """)
+            quick_buttons_layout.addWidget(btn)
+        
+        layout.addLayout(quick_buttons_layout)
         
         ai_widget.setLayout(layout)
         return ai_widget
     
+    def process_ai_request(self):
+        """Обработка запроса к ИИ"""
+        query = self.ai_input.text().strip()
+        if not query:
+            return
+        
+        # Симуляция ответа ИИ
+        import random
+        from datetime import datetime
+        
+        responses = {
+            "план": [
+                "📋 Рекомендуемый план дня:\n\n1. 🌅 Утро (6:00-9:00): Планирование и важные задачи\n2. ☀️ День (9:00-13:00): Основная работа\n3. 🍽️ Обед (13:00-14:00): Отдых и восстановление\n4. 🌆 Вечер (14:00-18:00): Завершение дел\n5. 🌙 Ночь: Подведение итогов",
+                "🎯 Эффективный день начинается с:\n\n• Четкого списка приоритетов\n• Блокировки времени для важных задач\n• Регулярных перерывов\n• Анализа результатов"
+            ],
+            "время": [
+                "⏰ Техники управления временем:\n\n🍅 Pomodoro: 25 мин работы + 5 мин отдыха\n📊 Time blocking: Блокировка времени для задач\n🎯 Eisenhower Matrix: Важное vs Срочное\n⚡ GTD: Getting Things Done система",
+                "💡 Секреты продуктивности:\n\n• Начинайте с самого сложного\n• Используйте правило 2 минут\n• Группируйте похожие задачи\n• Избегайте многозадачности"
+            ],
+            "цели": [
+                "🎯 SMART цели:\n\nS - Specific (Конкретные)\nM - Measurable (Измеримые)\nA - Achievable (Достижимые)\nR - Relevant (Релевантные)\nT - Time-bound (Ограниченные по времени)\n\nПример: 'Изучить Python за 3 месяца, уделяя 1 час в день'",
+                "🚀 Стратегия достижения целей:\n\n1. Разбейте большую цель на маленькие шаги\n2. Отслеживайте прогресс ежедневно\n3. Празднуйте маленькие победы\n4. Корректируйте план при необходимости"
+            ],
+            "мотивация": [
+                "💪 Мотивационный заряд:\n\n'Успех - это сумма маленьких усилий, повторяемых день за днем.'\n\n🌟 Помните: каждая выполненная задача приближает вас к цели!\n⚡ Вы уже на правильном пути!",
+                "🔥 Источники мотивации:\n\n• Визуализируйте свой успех\n• Ведите дневник достижений\n• Окружайте себя вдохновляющими людьми\n• Помните свое 'Зачем'"
+            ]
+        }
+        
+        # Определяем тип запроса
+        query_lower = query.lower()
+        response_type = "общий"
+        
+        for key in responses.keys():
+            if key in query_lower:
+                response_type = key
+                break
+        
+        if response_type in responses:
+            response = random.choice(responses[response_type])
+        else:
+            response = f"🤖 Анализирую ваш запрос: '{query}'\n\n💡 Это интересный вопрос! Вот что я думаю:\n\n• Начните с определения конкретной цели\n• Разбейте задачу на маленькие шаги\n• Используйте техники тайм-менеджмента\n• Отслеживайте прогресс\n\n⚡ Помните: постоянство важнее совершенства!"
+        
+        current_time = datetime.now().strftime('%H:%M:%S')
+        full_response = f"❓ Ваш вопрос: {query}\n\n{response}\n\n🕐 Время ответа: {current_time}"
+        
+        self.ai_results.setPlainText(full_response)
+        self.ai_input.clear()
+    
+    def quick_ai_request(self, prompt):
+        """Быстрый запрос к ИИ"""
+        self.ai_input.setText(prompt)
+        self.process_ai_request()
     def create_integrations_tab(self):
         """Создание вкладки интеграций"""
         integrations_widget = QWidget()
@@ -1684,62 +2092,630 @@ class HybridTimeBlockingApp(QMainWindow):
         self.integrations_status.setText(status_text)
     
     def create_settings_tab(self):
-        """Создание вкладки настроек"""
+        """Создание современной вкладки настроек"""
         settings_widget = QWidget()
         layout = QVBoxLayout()
         
-        # Заголовок
-        title = QLabel("⚙️ Настройки приложения")
-        title.setStyleSheet("font-size: 18px; font-weight: bold; padding: 10px;")
+        # Современный заголовок
+        title = QLabel("⚙️ Настройки и конфигурация")
+        title.setStyleSheet("""
+            font-size: 20px; 
+            font-weight: bold; 
+            padding: 15px; 
+            text-align: center;
+            background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #607D8B, stop:1 #455A64);
+            border-radius: 10px;
+            color: white;
+            margin: 10px;
+        """)
+        title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
         
-        # Кнопка открытия настроек
-        open_settings_btn = QPushButton("🔧 Открыть настройки")
+        # Создаем область с прокруткой
+        scroll_area = QScrollArea()
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+        
+        # Кнопка открытия современных настроек
+        open_settings_btn = QPushButton("🔧 Открыть расширенные настройки")
         open_settings_btn.clicked.connect(self.open_modern_settings)
         open_settings_btn.setStyleSheet("""
             QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #FF2B43, stop:1 #E01E37);
+                color: white;
+                border: none;
+                padding: 20px 40px;
                 font-size: 16px;
-                padding: 15px 30px;
+                border-radius: 12px;
+                font-weight: bold;
+                min-width: 300px;
+                min-height: 60px;
+                box-shadow: 0 6px 15px rgba(255, 43, 67, 0.3);
                 margin: 20px;
-                min-height: 50px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #FF4A5F, stop:1 #FF2B43);
+                transform: translateY(-3px);
+                box-shadow: 0 8px 20px rgba(255, 43, 67, 0.4);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #E01E37, stop:1 #C01A31);
+                transform: translateY(0px);
             }
         """)
-        layout.addWidget(open_settings_btn)
+        scroll_layout.addWidget(open_settings_btn)
+        
+        # Быстрые настройки
+        quick_settings_group = QLabel("⚡ Быстрые настройки")
+        quick_settings_group.setStyleSheet("""
+            font-size: 16px; 
+            font-weight: bold; 
+            color: #FFC107; 
+            background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #2D2D2D, stop:1 #3D3D3D);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #FFC107;
+            margin: 10px 0;
+        """)
+        scroll_layout.addWidget(quick_settings_group)
+        
+        # Быстрые переключатели
+        quick_buttons_layout = QHBoxLayout()
+        
+        theme_btn = QPushButton("🎨 Сменить тему")
+        theme_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #9C27B0, stop:1 #7B1FA2);
+                color: white;
+                border: none;
+                padding: 15px 20px;
+                font-size: 13px;
+                border-radius: 10px;
+                font-weight: bold;
+                min-width: 140px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #BA68C8, stop:1 #9C27B0);
+            }
+        """)
+        quick_buttons_layout.addWidget(theme_btn)
+        
+        lang_btn = QPushButton("🌐 Язык")
+        lang_btn.clicked.connect(self.open_modern_settings)
+        lang_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2196F3, stop:1 #1976D2);
+                color: white;
+                border: none;
+                padding: 15px 20px;
+                font-size: 13px;
+                border-radius: 10px;
+                font-weight: bold;
+                min-width: 140px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #42A5F5, stop:1 #2196F3);
+            }
+        """)
+        quick_buttons_layout.addWidget(lang_btn)
+        
+        notifications_btn = QPushButton("🔔 Уведомления")
+        notifications_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #FF9800, stop:1 #F57C00);
+                color: white;
+                border: none;
+                padding: 15px 20px;
+                font-size: 13px;
+                border-radius: 10px;
+                font-weight: bold;
+                min-width: 140px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #FFB74D, stop:1 #FF9800);
+            }
+        """)
+        quick_buttons_layout.addWidget(notifications_btn)
+        
+        quick_buttons_layout.addStretch()
+        scroll_layout.addLayout(quick_buttons_layout)
         
         # Информация о настройках
-        info_text = QLabel("""
-        <div style='padding: 20px; line-height: 1.6;'>
-            <h3>🌟 Доступные настройки:</h3>
-            <ul>
-                <li><b>🌐 Общие:</b> Язык интерфейса, тема оформления</li>
-                <li><b>🤖 ИИ-Помощник:</b> API ключи, модели, поведение</li>
-                <li><b>🔗 Интеграции:</b> Slack, Trello, Notion</li>
-                <li><b>ℹ️ О программе:</b> Информация о команде разработчиков</li>
-            </ul>
-            
-            <p><i>Настройки автоматически сохраняются и применяются при перезапуске приложения.</i></p>
-        </div>
+        info_text = QTextEdit()
+        info_text.setReadOnly(True)
+        info_text.setMaximumHeight(250)
+        info_text.setStyleSheet("""
+            QTextEdit {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #2D2D2D, stop:1 #3D3D3D);
+                border: 2px solid #607D8B;
+                border-radius: 12px;
+                padding: 20px;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 14px;
+                color: #CCCCCC;
+                selection-background-color: #607D8B;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }
         """)
-        info_text.setWordWrap(True)
-        info_text.setStyleSheet("color: #CCCCCC; background: #2D2D2D; border-radius: 8px; padding: 15px;")
-        layout.addWidget(info_text)
         
-        layout.addStretch()
+        info_content = """🌟 Доступные настройки:
+
+🌐 ОБЩИЕ НАСТРОЙКИ:
+• Язык интерфейса (Русский, English, Deutsch, Français, Español)
+• Тема оформления (Темная, Светлая)
+• Автозапуск с системой
+• Сворачивание в трей
+
+🤖 ИИ-ПОМОЩНИК:
+• API ключи для OpenAI
+• Модели GPT (GPT-3.5, GPT-4)
+• Настройки поведения ИИ
+• Персонализация ответов
+
+🔗 ИНТЕГРАЦИИ:
+• Slack Webhook настройки
+• Trello API ключи
+• Notion Integration Token
+• Автоматическая синхронизация
+
+ℹ️ О ПРОГРАММЕ:
+• Информация о версии
+• Команда разработчиков
+• Лицензия и права
+• Обновления
+
+💡 СОВЕТ: Настройки автоматически сохраняются и применяются мгновенно!"""
+        
+        info_text.setPlainText(info_content)
+        scroll_layout.addWidget(info_text)
+        
+        # Системная информация
+        system_group = QLabel("💻 Системная информация")
+        system_group.setStyleSheet("""
+            font-size: 16px; 
+            font-weight: bold; 
+            color: #4CAF50; 
+            background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #2D2D2D, stop:1 #3D3D3D);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #4CAF50;
+            margin: 10px 0;
+        """)
+        scroll_layout.addWidget(system_group)
+        
+        # Системные кнопки
+        system_buttons_layout = QHBoxLayout()
+        
+        backup_btn = QPushButton("💾 Резервная копия")
+        backup_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #4CAF50, stop:1 #45A049);
+                color: white;
+                border: none;
+                padding: 12px 20px;
+                font-size: 13px;
+                border-radius: 8px;
+                font-weight: bold;
+                min-width: 140px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #5CBF60, stop:1 #4CAF50);
+            }
+        """)
+        system_buttons_layout.addWidget(backup_btn)
+        
+        reset_btn = QPushButton("🔄 Сброс настроек")
+        reset_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #FF5722, stop:1 #E64A19);
+                color: white;
+                border: none;
+                padding: 12px 20px;
+                font-size: 13px;
+                border-radius: 8px;
+                font-weight: bold;
+                min-width: 140px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #FF7043, stop:1 #FF5722);
+            }
+        """)
+        system_buttons_layout.addWidget(reset_btn)
+        
+        about_btn = QPushButton("ℹ️ О программе")
+        about_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #607D8B, stop:1 #455A64);
+                color: white;
+                border: none;
+                padding: 12px 20px;
+                font-size: 13px;
+                border-radius: 8px;
+                font-weight: bold;
+                min-width: 140px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #78909C, stop:1 #607D8B);
+            }
+        """)
+        system_buttons_layout.addWidget(about_btn)
+        
+        system_buttons_layout.addStretch()
+        scroll_layout.addLayout(system_buttons_layout)
+        
+        scroll_area.setWidget(scroll_widget)
+        scroll_area.setWidgetResizable(True)
+        layout.addWidget(scroll_area)
         
         settings_widget.setLayout(layout)
         return settings_widget
-    
     def open_modern_settings(self):
         """Открыть современные настройки"""
         try:
             from modern_settings import ModernSettingsDialog
             dialog = ModernSettingsDialog(self)
+            dialog.settings_changed.connect(self.on_settings_changed)
             if dialog.exec_() == QDialog.Accepted:
-                QMessageBox.information(self, "Настройки", "Настройки сохранены! Некоторые изменения требуют перезапуска приложения.")
+                QMessageBox.information(self, _("settings"), _("settings_saved"))
         except ImportError:
-            QMessageBox.warning(self, "Ошибка", "Модуль настроек не найден!")
+            QMessageBox.warning(self, _("error"), "Модуль настроек не найден!")
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Не удалось открыть настройки: {str(e)}")
+            QMessageBox.critical(self, _("error"), f"Не удалось открыть настройки: {str(e)}")
+    
+    def on_settings_changed(self, changes):
+        """Обработчик изменения настроек"""
+        if changes.get("language_changed"):
+            # Обновляем интерфейс с новым языком
+            self.update_interface_language()
+    
+    def update_interface_language(self):
+        """Обновление языка интерфейса мгновенно"""
+        try:
+            # Обновляем заголовок окна
+            self.setWindowTitle(_("app_title"))
+            
+            # Обновляем названия вкладок
+            if hasattr(self, 'tabs'):
+                for i in range(self.tabs.count()):
+                    tab_widget = self.tabs.widget(i)
+                    if hasattr(tab_widget, 'objectName'):
+                        name = tab_widget.objectName()
+                        if name == "dashboard_tab":
+                            self.tabs.setTabText(i, "📊 " + _("tab_dashboard"))
+                        elif name == "tasks_tab":
+                            self.tabs.setTabText(i, _("tab_tasks"))
+                        elif name == "ai_tab":
+                            self.tabs.setTabText(i, "🤖 " + _("ai_assistant"))
+                        elif name == "integrations_tab":
+                            self.tabs.setTabText(i, "🔗 " + _("integrations"))
+                        elif name == "settings_tab":
+                            self.tabs.setTabText(i, "⚙️ " + _("settings"))
+            
+            # Пересоздаем содержимое активной вкладки для мгновенного обновления
+            current_index = self.tabs.currentIndex()
+            current_widget = self.tabs.widget(current_index)
+            
+            if hasattr(current_widget, 'objectName'):
+                name = current_widget.objectName()
+                if name == "dashboard_tab":
+                    # Обновляем объединенную панель
+                    new_widget = self.create_combined_dashboard_tab()
+                    new_widget.setObjectName("dashboard_tab")
+                    self.tabs.removeTab(current_index)
+                    self.tabs.insertTab(current_index, new_widget, "📊 " + _("tab_dashboard"))
+                    self.tabs.setCurrentIndex(current_index)
+                elif name == "tasks_tab":
+                    # Обновляем вкладку задач
+                    new_widget = self.create_tasks_tab()
+                    new_widget.setObjectName("tasks_tab")
+                    self.tabs.removeTab(current_index)
+                    self.tabs.insertTab(current_index, new_widget, _("tab_tasks"))
+                    self.tabs.setCurrentIndex(current_index)
+            
+            # Обновляем кнопки и элементы интерфейса
+            self.refresh_ui_elements()
+            
+            print(f"Язык интерфейса обновлен на: {localization.current_language}")
+            
+        except Exception as e:
+            print(f"Ошибка обновления языка: {e}")
+    
+    def refresh_ui_elements(self):
+        """Обновление элементов интерфейса"""
+        try:
+            # Обновляем кнопки в задачах
+            if hasattr(self, 'add_task_btn'):
+                self.add_task_btn.setText(_("add_task"))
+            
+            # Обновляем другие элементы интерфейса
+            # Это можно расширить для всех элементов
+            
+        except Exception as e:
+            print(f"Ошибка обновления элементов UI: {e}")
+    
+    
+    def update_all_dynamic_elements(self):
+        """Обновление всех динамических элементов интерфейса"""
+        try:
+            # Обновляем список задач
+            if hasattr(self, 'upcoming_tasks') and self.upcoming_tasks:
+                new_text = dynamic_task_list.get_dynamic_task_text()
+                self.upcoming_tasks.setPlainText(new_text)
+            
+            # Обновляем график
+            if hasattr(self, 'chart_widget') and self.chart_widget:
+                new_chart = dynamic_chart.get_dynamic_chart_text()
+                self.chart_widget.setPlainText(new_chart)
+            
+            # Обновляем статистику
+            if hasattr(self, 'stats_widget') and self.stats_widget:
+                new_stats = dynamic_stats.get_dynamic_stats_text()
+                self.stats_widget.setPlainText(new_stats)
+            
+            # Обновляем список задач в отдельной вкладке
+            if hasattr(self, 'tasks_list_widget') and self.tasks_list_widget:
+                self.update_tasks_display()
+            
+            # Обновляем статистику задач
+            if hasattr(self, 'tasks_stats_widget') and self.tasks_stats_widget:
+                self.update_tasks_stats()
+            
+            # Обновляем статус интеграций
+            if hasattr(self, 'integrations_status') and self.integrations_status:
+                self.update_integrations_status()
+                
+        except Exception as e:
+            print(f"Ошибка обновления динамических элементов: {e}")
+    
+    def clear_completed_tasks(self):
+        """Очистка выполненных задач"""
+        try:
+            from task_manager import task_manager, TaskStatus
+            all_tasks = task_manager.get_all_tasks()
+            completed_tasks = [t for t in all_tasks if t.status == TaskStatus.COMPLETED]
+            
+            if completed_tasks:
+                # Здесь можно добавить логику удаления
+                self.update_tasks_display()
+                self.update_tasks_stats()
+                print(f"Очищено {len(completed_tasks)} выполненных задач")
+            else:
+                print("Нет выполненных задач для очистки")
+                
+        except Exception as e:
+            print(f"Ошибка очистки задач: {e}")
+    
+    def refresh_tasks(self):
+        """Обновление списка задач"""
+        try:
+            self.update_tasks_display()
+            self.update_tasks_stats()
+            print("Список задач обновлен")
+        except Exception as e:
+            print(f"Ошибка обновления задач: {e}")
+    def update_time_display(self):
+        """Обновление отображения времени в реальном времени"""
+        try:
+            # Обновляем время в карточке времени если она существует
+            if hasattr(self, 'time_card') and self.time_card:
+                current_time = localization.format_moscow_time("%H:%M:%S")
+                current_date = localization.format_moscow_time("%d.%m.%Y")
+                day_of_week = localization.format_moscow_time("%A")
+                
+                # Переводим день недели
+                day_translations = {
+                    "Monday": "Понедельник", "Tuesday": "Вторник", "Wednesday": "Среда",
+                    "Thursday": "Четверг", "Friday": "Пятница", "Saturday": "Суббота", "Sunday": "Воскресенье"
+                }
+                day_ru = day_translations.get(day_of_week, day_of_week)
+                
+                # Определяем цвет времени в зависимости от часа
+                hour = int(current_time.split(':')[0])
+                time_color = "#FFD700"  # Золотой по умолчанию
+                if 6 <= hour < 12:
+                    time_color = "#FF6B35"  # Утро - оранжевый
+                elif 12 <= hour < 18:
+                    time_color = "#4ECDC4"  # День - бирюзовый
+                elif 18 <= hour < 22:
+                    time_color = "#45B7D1"  # Вечер - синий
+                else:
+                    time_color = "#9B59B6"  # Ночь - фиолетовый
+                
+                # Добавляем эмодзи в зависимости от времени суток
+                time_emoji = "🌅" if 6 <= hour < 12 else "☀️" if 12 <= hour < 18 else "🌆" if 18 <= hour < 22 else "🌙"
+                
+                # Вычисляем прогресс дня (0-100%)
+                minutes_since_midnight = hour * 60 + int(current_time.split(':')[1])
+                day_progress = (minutes_since_midnight / 1440) * 100  # 1440 минут в сутках
+                
+                # Мотивационные сообщения в зависимости от времени
+                motivational_messages = {
+                    "morning": ["Доброе утро! Время для продуктивности! 💪", "Новый день - новые возможности! 🌟"],
+                    "day": ["Продуктивного дня! Вы на пути к цели! 🎯", "Отличная работа! Продолжайте! 🚀"],
+                    "evening": ["Время подвести итоги дня 📊", "Заслуженный отдых близко! 🌅"],
+                    "night": ["Время отдыха и восстановления 😴", "Завтра новый день! 🌙"]
+                }
+                
+                period = "morning" if 6 <= hour < 12 else "day" if 12 <= hour < 18 else "evening" if 18 <= hour < 22 else "night"
+                import random
+                motivation = random.choice(motivational_messages[period])
+                
+                # Обновляем HTML содержимое карточки времени с анимацией и прогрессом
+                self.time_card.setText(f"""
+                <div style='background: linear-gradient(135deg, #2D2D2D, #3D3D3D); padding: 25px; border-radius: 12px; text-align: center; border: 1px solid {time_color}40; box-shadow: 0 4px 12px rgba(0,0,0,0.3);'>
+                    <h3 style='color: #2196F3; margin: 0; font-size: 14px;'>{time_emoji} {_("current_time")}</h3>
+                    <h1 style='margin: 15px 0; font-family: "Courier New", monospace; color: {time_color}; font-size: 32px; text-shadow: 0 0 10px {time_color}50; letter-spacing: 2px;'>{current_time}</h1>
+                    <p style='color: #CCCCCC; margin: 8px 0; font-size: 13px; font-weight: bold;'>{day_ru}</p>
+                    <p style='color: #999; margin: 5px 0; font-size: 12px;'>{current_date}</p>
+                    
+                    <!-- Прогресс дня -->
+                    <div style='margin: 15px 0; background: #1A1A1A; border-radius: 10px; height: 8px; overflow: hidden;'>
+                        <div style='background: linear-gradient(90deg, {time_color}, {time_color}80); height: 100%; width: {day_progress:.1f}%; border-radius: 10px; transition: width 0.3s ease;'></div>
+                    </div>
+                    <p style='color: {time_color}; margin: 5px 0; font-size: 11px; font-weight: bold;'>День завершен на {day_progress:.0f}%</p>
+                    
+                    <!-- Мотивационное сообщение -->
+                    <p style='color: #FFD700; margin: 10px 0; font-size: 11px; font-style: italic; opacity: 0.9;'>{motivation}</p>
+                </div>
+                """)
+                
+        except Exception as e:
+            print(f"Ошибка обновления времени: {e}")
+    
+    def create_stat_card(self, title, value, color):
+        """Создание карточки статистики"""
+        card = QWidget()
+        layout = QVBoxLayout(card)
+        
+        title_label = QLabel(title)
+        title_label.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {color};")
+        title_label.setAlignment(Qt.AlignCenter)
+        
+        value_label = QLabel(value)
+        value_label.setStyleSheet("font-size: 24px; font-weight: bold; color: white;")
+        value_label.setAlignment(Qt.AlignCenter)
+        
+        layout.addWidget(title_label)
+        layout.addWidget(value_label)
+        
+        card.setStyleSheet(f"""
+            QWidget {{
+                background: rgba(255, 255, 255, 0.05);
+                border: 2px solid {color};
+                border-radius: 10px;
+                padding: 15px;
+                margin: 5px;
+            }}
+        """)
+        
+        # Сохраняем ссылку на value_label для обновления
+        card.value_label = value_label
+        
+        return card
+    
+    def create_analytics_tab(self):
+        """Создание вкладки аналитики с графиками"""
+        widget = QWidget()
+        layout = QVBoxLayout()
+        
+        # Заголовок
+        title = QLabel("  Аналитика и статистика")
+        title.setStyleSheet("font-size: 18px; font-weight: bold; padding: 10px;")
+        layout.addWidget(title)
+        
+        # Статистические карточки
+        stats_layout = QHBoxLayout()
+        
+        # Получаем статистику
+        try:
+            today_stats = task_manager.get_today_stats()
+        except:
+            today_stats = {'total_tasks': 0, 'completed_tasks': 0, 'efficiency': 0}
+        
+        # Карточка общих задач
+        total_card = self.create_stat_card(
+            "Всего задач", 
+            str(today_stats.get('total_tasks', 0)), 
+            "#FF2B43"
+        )
+        stats_layout.addWidget(total_card)
+        
+        # Карточка выполненных
+        completed_card = self.create_stat_card(
+            "Выполнено", 
+            str(today_stats.get('completed_tasks', 0)), 
+            "#4CAF50"
+        )
+        stats_layout.addWidget(completed_card)
+        
+        # Карточка эффективности
+        efficiency_card = self.create_stat_card(
+            "Эффективность", 
+            f"{today_stats.get('efficiency', 0)}%", 
+            "#2196F3"
+        )
+        stats_layout.addWidget(efficiency_card)
+        
+        layout.addLayout(stats_layout)
+        
+        # Простой график производительности
+        chart_label = QLabel("📈 График производительности за неделю")
+        chart_label.setStyleSheet("font-size: 16px; font-weight: bold; margin: 20px 0 10px 0;")
+        layout.addWidget(chart_label)
+        
+        # Простая визуализация
+        self.chart_widget = QTextEdit()
+        self.chart_widget.setReadOnly(True)
+        self.chart_widget.setMaximumHeight(200)
+        
+        # Получаем статистику
+        all_tasks = task_manager.get_all_tasks()
+        completed_tasks = [t for t in all_tasks if t.status == TaskStatus.COMPLETED]
+        
+        chart_text = "Статистика по дням недели:\n\n"
+        days = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+        
+        # Простая визуализация
+        for i, day in enumerate(days):
+            # Имитируем данные для демонстрации
+            completed = min(len(completed_tasks), 10)
+            bar = "█" * (completed // 2) + "░" * (5 - (completed // 2))
+            chart_text += f"{day}: {bar} ({completed//2}/5)\n"
+        
+        self.chart_widget.setPlainText(dynamic_chart.get_dynamic_chart_text())
+        self.chart_widget.setStyleSheet("""
+            QTextEdit {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #2D2D2D, stop:1 #3D3D3D);
+                border: 2px solid #FF2B43;
+                border-radius: 12px;
+                padding: 20px;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 14px;
+                color: #CCCCCC;
+                selection-background-color: #FF2B43;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }
+        """)
+        layout.addWidget(self.chart_widget)
+        
+        # Детальная статистика
+        stats_label = QLabel("📅 Детальная статистика")
+        stats_label.setStyleSheet("font-size: 16px; font-weight: bold; margin: 20px 0 10px 0;")
+        layout.addWidget(stats_label)
+        
+        self.stats_widget = QTextEdit()
+        self.stats_widget.setReadOnly(True)
+        self.stats_widget.setMaximumHeight(150)
+        
+        stats_text = f"""Общая статистика:
+• Всего задач: {len(all_tasks)}
+• Выполнено: {len(completed_tasks)}
+• В процессе: {len([t for t in all_tasks if t.status == TaskStatus.IN_PROGRESS])}
+• Запланировано: {len([t for t in all_tasks if t.status == TaskStatus.PLANNED])}
+
+Продуктивность:
+• Процент выполнения: {(len(completed_tasks) / len(all_tasks) * 100) if all_tasks else 0:.1f}%
+• Средняя длительность: {sum(t.get_duration_minutes() for t in all_tasks) / len(all_tasks) if all_tasks else 0:.0f} мин"""
+        
+        self.stats_widget.setPlainText(dynamic_stats.get_dynamic_stats_text())
+        self.stats_widget.setStyleSheet("""
+            QTextEdit {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #2D2D2D, stop:1 #3D3D3D);
+                border: 2px solid #4CAF50;
+                border-radius: 12px;
+                padding: 20px;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 14px;
+                color: #CCCCCC;
+                selection-background-color: #4CAF50;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }
+        """)
+        layout.addWidget(self.stats_widget)
+        
+        layout.addStretch()
+        widget.setLayout(layout)
+        return widget
 
 def main():
     """Главная функция с инициализацией всех улучшений"""

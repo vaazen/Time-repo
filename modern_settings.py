@@ -363,18 +363,43 @@ class ModernSettingsDialog(QDialog):
         self.language_combo.setCurrentIndex(lang_map.get(current_lang, 0))
         
         # ИИ настройки
-        self.ai_enabled.setChecked(self.settings.get("ai/enabled", True))
-        self.api_key.setText(self.settings.get("ai/api_key", ""))
+        ai_enabled = self.settings.get("ai/enabled", True)
+        if isinstance(ai_enabled, str):
+            ai_enabled = ai_enabled.lower() == 'true'
+        self.ai_enabled.setChecked(bool(ai_enabled))
+        self.api_key.setText(str(self.settings.get("ai/api_key", "")))
         
         # Интеграции
-        self.slack_enabled.setChecked(self.settings.get("integrations/slack_enabled", False))
-        self.slack_webhook.setText(self.settings.get("integrations/slack_webhook", ""))
+        slack_enabled = self.settings.get("integrations/slack_enabled", False)
+        if isinstance(slack_enabled, str):
+            slack_enabled = slack_enabled.lower() == 'true'
+        self.slack_enabled.setChecked(bool(slack_enabled))
+        self.slack_webhook.setText(str(self.settings.get("integrations/slack_webhook", "")))
+        
+        # Поведение приложения
+        start_with_system = self.settings.get("behavior/start_with_system", False)
+        if isinstance(start_with_system, str):
+            start_with_system = start_with_system.lower() == 'true'
+        self.start_with_system.setChecked(bool(start_with_system))
+        
+        minimize_to_tray = self.settings.get("behavior/minimize_to_tray", True)
+        if isinstance(minimize_to_tray, str):
+            minimize_to_tray = minimize_to_tray.lower() == 'true'
+        self.minimize_to_tray.setChecked(bool(minimize_to_tray))
     
     def apply_settings(self):
         """Применение настроек"""
-        # Сохраняем язык
+        # Сохраняем язык и применяем его
         lang_values = ["ru", "en", "de", "fr", "es"]
-        self.settings.set("general/language", lang_values[self.language_combo.currentIndex()])
+        selected_lang = lang_values[self.language_combo.currentIndex()]
+        self.settings.set("general/language", selected_lang)
+        
+        # Применяем язык к системе локализации
+        try:
+            from localization_system import localization
+            localization.set_language(selected_lang)
+        except ImportError:
+            pass
         
         # Сохраняем ИИ настройки
         self.settings.set("ai/enabled", self.ai_enabled.isChecked())
@@ -384,7 +409,11 @@ class ModernSettingsDialog(QDialog):
         self.settings.set("integrations/slack_enabled", self.slack_enabled.isChecked())
         self.settings.set("integrations/slack_webhook", self.slack_webhook.text())
         
-        self.settings_changed.emit({})
+        # Сохраняем поведение приложения
+        self.settings.set("behavior/start_with_system", self.start_with_system.isChecked())
+        self.settings.set("behavior/minimize_to_tray", self.minimize_to_tray.isChecked())
+        
+        self.settings_changed.emit({"language_changed": True})
     
     def save_and_close(self):
         """Сохранить и закрыть"""

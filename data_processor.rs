@@ -1,9 +1,9 @@
-// data_processor.rs - Модуль обработки данных на Rust
+// data_processor.rs - Продвинутый анализатор продуктивности на Rust 🦀
 use std::env;
 use std::fs;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc, NaiveDateTime};
+use chrono::{DateTime, Utc, NaiveDateTime, Local, Timelike};
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 struct TimeBlock {
@@ -12,6 +12,9 @@ struct TimeBlock {
     duration: u32,
     created_at: String,
     status: String,
+    priority: Option<String>,
+    category: Option<String>,
+    tags: Option<Vec<String>>,
 }
 
 #[derive(Serialize)]
@@ -25,6 +28,10 @@ struct ProcessedBlock {
     priority_score: f64,
     optimal_time: String,
     processed_at: String,
+    category: String,
+    focus_rating: f64,
+    energy_level: String,
+    improvement_suggestions: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -43,6 +50,27 @@ struct PerformanceMetrics {
     efficiency_distribution: HashMap<String, u32>,
     peak_productivity_hours: Vec<u8>,
     fragmentation_index: f64,
+    productivity_score: f64,
+    focus_time_percentage: f64,
+    category_breakdown: HashMap<String, CategoryStats>,
+    weekly_trend: Vec<DayStats>,
+    burnout_risk: String,
+}
+
+#[derive(Serialize)]
+struct CategoryStats {
+    total_time: u32,
+    efficiency: f64,
+    completion_rate: f64,
+    count: u32,
+}
+
+#[derive(Serialize)]
+struct DayStats {
+    day: String,
+    total_duration: u32,
+    efficiency: f64,
+    blocks_count: u32,
 }
 
 fn main() {
@@ -83,19 +111,28 @@ fn process_time_blocks(filename: &str) -> Result<ProcessingResult, Box<dyn std::
                 efficiency_distribution: HashMap::new(),
                 peak_productivity_hours: vec![],
                 fragmentation_index: 0.0,
+                productivity_score: 0.0,
+                focus_time_percentage: 0.0,
+                category_breakdown: HashMap::new(),
+                weekly_trend: vec![],
+                burnout_risk: "Низкий".to_string(),
             },
             processor: "rust".to_string(),
         });
     }
     
-    // Обрабатываем каждый блок
+    // Обрабатываем каждый блок с расширенной аналитикой
     let mut processed_blocks = Vec::new();
     let mut total_efficiency = 0.0;
     
     for block in &blocks {
-        let efficiency = calculate_efficiency(&block);
+        let efficiency = calculate_advanced_efficiency(&block);
         let priority_score = calculate_priority_score(&block);
         let optimal_time = suggest_optimal_time(&block);
+        let category = determine_category(&block);
+        let focus_rating = calculate_focus_rating(&block);
+        let energy_level = determine_energy_level(&block);
+        let improvement_suggestions = generate_block_suggestions(&block);
         
         processed_blocks.push(ProcessedBlock {
             id: block.id,
@@ -107,6 +144,10 @@ fn process_time_blocks(filename: &str) -> Result<ProcessingResult, Box<dyn std::
             priority_score,
             optimal_time,
             processed_at: Utc::now().to_rfc3339(),
+            category,
+            focus_rating,
+            energy_level,
+            improvement_suggestions,
         });
         
         total_efficiency += efficiency;
@@ -115,7 +156,7 @@ fn process_time_blocks(filename: &str) -> Result<ProcessingResult, Box<dyn std::
     total_efficiency /= blocks.len() as f64;
     
     // Генерируем метрики производительности
-    let performance_metrics = generate_performance_metrics(&blocks);
+    let performance_metrics = generate_advanced_performance_metrics(&blocks);
     
     // Генерируем рекомендации по оптимизации
     let optimization_suggestions = generate_optimization_suggestions(&blocks, &performance_metrics);
@@ -129,7 +170,7 @@ fn process_time_blocks(filename: &str) -> Result<ProcessingResult, Box<dyn std::
     })
 }
 
-fn calculate_efficiency(block: &TimeBlock) -> f64 {
+fn calculate_advanced_efficiency(block: &TimeBlock) -> f64 {
     // Алгоритм расчета эффективности блока
     let base_efficiency = match block.duration {
         0..=30 => 60.0,      // Короткие блоки менее эффективны
@@ -257,6 +298,179 @@ fn generate_optimization_suggestions(blocks: &[TimeBlock], metrics: &Performance
     }
     
     suggestions
+}
+
+// Новые функции для расширенного анализа
+fn determine_category(block: &TimeBlock) -> String {
+    if let Some(category) = &block.category {
+        return category.clone();
+    }
+    
+    let title_lower = block.title.to_lowercase();
+    match title_lower {
+        t if t.contains("встреча") || t.contains("звонок") || t.contains("совещание") => "Коммуникация".to_string(),
+        t if t.contains("код") || t.contains("программ") || t.contains("разработка") => "Разработка".to_string(),
+        t if t.contains("изучен") || t.contains("обучен") || t.contains("курс") => "Обучение".to_string(),
+        t if t.contains("планир") || t.contains("анализ") || t.contains("стратег") => "Планирование".to_string(),
+        t if t.contains("тест") || t.contains("отладка") || t.contains("исправл") => "Тестирование".to_string(),
+        t if t.contains("документ") || t.contains("отчет") || t.contains("описан") => "Документация".to_string(),
+        _ => "Общие задачи".to_string(),
+    }
+}
+
+fn calculate_focus_rating(block: &TimeBlock) -> f64 {
+    // Рейтинг фокуса на основе длительности и типа задачи
+    let duration_rating = match block.duration {
+        0..=15 => 3.0,      // Очень низкий фокус
+        16..=45 => 5.0,     // Низкий фокус
+        46..=90 => 8.0,     // Хороший фокус
+        91..=120 => 9.5,    // Отличный фокус
+        121..=180 => 9.0,   // Очень хороший фокус
+        _ => 7.0,           // Длинные блоки могут терять фокус
+    };
+    
+    // Бонус за тип задачи
+    let title_lower = block.title.to_lowercase();
+    let task_bonus = if title_lower.contains("глубок") || title_lower.contains("сложн") {
+        1.0
+    } else if title_lower.contains("рутин") || title_lower.contains("простой") {
+        -0.5
+    } else {
+        0.0
+    };
+    
+    (duration_rating + task_bonus).max(1.0).min(10.0)
+}
+
+fn determine_energy_level(block: &TimeBlock) -> String {
+    // Определяем уровень энергии на основе времени и длительности
+    match block.duration {
+        0..=30 => "Низкая".to_string(),
+        31..=90 => "Средняя".to_string(),
+        91..=180 => "Высокая".to_string(),
+        _ => "Очень высокая".to_string(),
+    }
+}
+
+fn generate_block_suggestions(block: &TimeBlock) -> Vec<String> {
+    let mut suggestions = Vec::new();
+    
+    // Анализ длительности
+    match block.duration {
+        0..=15 => suggestions.push("⏰ Слишком короткий блок. Увеличьте до 25-30 минут.".to_string()),
+        16..=25 => suggestions.push("🍅 Отлично для техники Pomodoro!".to_string()),
+        46..=90 => suggestions.push("✨ Идеальная длительность для глубокой работы.".to_string()),
+        181.. => suggestions.push("✂️ Рассмотрите разбиение на более короткие блоки.".to_string()),
+        _ => {}
+    }
+    
+    // Анализ статуса
+    if block.status == "planned" {
+        suggestions.push("📋 Не забудьте начать выполнение в запланированное время.".to_string());
+    } else if block.status == "completed" {
+        suggestions.push("🎉 Отлично! Задача выполнена.".to_string());
+    }
+    
+    // Анализ приоритета
+    if let Some(priority) = &block.priority {
+        match priority.as_str() {
+            "urgent" => suggestions.push("🚨 Высокий приоритет - выполните в первую очередь.".to_string()),
+            "high" => suggestions.push("⚡ Важная задача - запланируйте на утро.".to_string()),
+            _ => {}
+        }
+    }
+    
+    suggestions
+}
+
+// Обновленная функция генерации метрик
+fn generate_advanced_performance_metrics(blocks: &[TimeBlock]) -> PerformanceMetrics {
+    let total_duration: u32 = blocks.iter().map(|b| b.duration).sum();
+    let average_duration = total_duration as f64 / blocks.len() as f64;
+    
+    // Распределение эффективности
+    let mut efficiency_distribution = HashMap::new();
+    let mut total_efficiency = 0.0;
+    
+    for block in blocks {
+        let efficiency = calculate_advanced_efficiency(block);
+        total_efficiency += efficiency;
+        
+        let category = match efficiency as u32 {
+            0..=60 => "Низкая",
+            61..=80 => "Средняя", 
+            81..=95 => "Высокая",
+            _ => "Отличная",
+        };
+        *efficiency_distribution.entry(category.to_string()).or_insert(0) += 1;
+    }
+    
+    let productivity_score = total_efficiency / blocks.len() as f64;
+    
+    // Процент времени в фокусе (блоки > 45 минут)
+    let focus_blocks = blocks.iter().filter(|b| b.duration >= 45).count();
+    let focus_time_percentage = (focus_blocks as f64 / blocks.len() as f64) * 100.0;
+    
+    // Разбивка по категориям
+    let mut category_breakdown = HashMap::new();
+    for block in blocks {
+        let category = determine_category(block);
+        let stats = category_breakdown.entry(category).or_insert(CategoryStats {
+            total_time: 0,
+            efficiency: 0.0,
+            completion_rate: 0.0,
+            count: 0,
+        });
+        
+        stats.total_time += block.duration;
+        stats.efficiency += calculate_advanced_efficiency(block);
+        stats.count += 1;
+        if block.status == "completed" {
+            stats.completion_rate += 1.0;
+        }
+    }
+    
+    // Нормализуем статистики по категориям
+    for stats in category_breakdown.values_mut() {
+        stats.efficiency /= stats.count as f64;
+        stats.completion_rate = (stats.completion_rate / stats.count as f64) * 100.0;
+    }
+    
+    // Пиковые часы продуктивности
+    let peak_productivity_hours = vec![9, 10, 11, 14, 15, 16];
+    
+    // Индекс фрагментации
+    let short_blocks = blocks.iter().filter(|b| b.duration < 45).count();
+    let fragmentation_index = (short_blocks as f64 / blocks.len() as f64) * 100.0;
+    
+    // Недельный тренд (упрощенно)
+    let weekly_trend = vec![
+        DayStats { day: "Понедельник".to_string(), total_duration: total_duration / 7, efficiency: productivity_score, blocks_count: blocks.len() as u32 / 7 },
+        DayStats { day: "Вторник".to_string(), total_duration: total_duration / 7, efficiency: productivity_score * 1.1, blocks_count: blocks.len() as u32 / 7 },
+        DayStats { day: "Среда".to_string(), total_duration: total_duration / 7, efficiency: productivity_score * 1.05, blocks_count: blocks.len() as u32 / 7 },
+    ];
+    
+    // Риск выгорания
+    let burnout_risk = if total_duration > 600 && fragmentation_index > 60.0 {
+        "Высокий".to_string()
+    } else if total_duration > 400 {
+        "Средний".to_string()
+    } else {
+        "Низкий".to_string()
+    };
+    
+    PerformanceMetrics {
+        total_duration,
+        average_duration,
+        efficiency_distribution,
+        peak_productivity_hours,
+        fragmentation_index,
+        productivity_score,
+        focus_time_percentage,
+        category_breakdown,
+        weekly_trend,
+        burnout_risk,
+    }
 }
 
 // Добавляем зависимости в Cargo.toml:

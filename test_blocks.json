@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "title": "Разработка нового функционала",
+    "duration": 120,
+    "created_at": "2024-01-15T09:00:00Z",
+    "status": "completed",
+    "priority": "high",
+    "category": "Разработка",
+    "tags": ["frontend", "react", "ui"]
+  },
+  {
+    "id": 2,
+    "title": "Встреча с командой",
+    "duration": 45,
+    "created_at": "2024-01-15T14:00:00Z",
+    "status": "completed",
+    "priority": "medium",
+    "category": "Коммуникация",
+    "tags": ["meeting", "team"]
+  },
+  {
+    "id": 3,
+    "title": "Изучение новой технологии",
+    "duration": 90,
+    "created_at": "2024-01-15T16:00:00Z",
+    "status": "in_progress",
+    "priority": "low",
+    "category": "Обучение",
+    "tags": ["learning", "rust"]
+  },
+  {
+    "id": 4,
+    "title": "Написание документации",
+    "duration": 60,
+    "created_at": "2024-01-15T11:00:00Z",
+    "status": "planned",
+    "priority": "medium",
+    "category": "Документация",
+    "tags": ["docs", "api"]
+  },
+  {
+    "id": 5,
+    "title": "Тестирование API",
+    "duration": 75,
+    "created_at": "2024-01-15T13:00:00Z",
+    "status": "completed",
+    "priority": "high",
+    "category": "Тестирование",
+    "tags": ["testing", "api", "quality"]
+  }
+]
