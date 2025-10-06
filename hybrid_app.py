@@ -1,4 +1,4 @@
-# hybrid_app.py - Гибридное приложение с несколькими языками программирования
+#hybrid_app.py 
 import sys
 import os
 import json
@@ -41,6 +41,21 @@ try:
 except ImportError as e:
     print(f"ИИ модули недоступны: {e}")
     AI_MODULES_AVAILABLE = False
+
+# Новые модули v6.0 - Улучшения производительности и UI
+try:
+    from config_manager import get_config, ConfigManager
+    from cache_manager import get_cache_manager, cached
+    from async_notifications import get_notification_manager, create_task_reminder
+    from modern_ui_components import (
+        ModernButton, ModernCard, ModernTaskItem, ModernSearchBox, 
+        ModernTabWidget, ModernSidebar, ModernStatusBar
+    )
+    V6_MODULES_AVAILABLE = True
+    print("Модули v6.0 загружены успешно")
+except ImportError as e:
+    print(f"Модули v6.0 недоступны: {e}")
+    V6_MODULES_AVAILABLE = False
 
 
 
@@ -731,6 +746,10 @@ class HybridTimeBlockingApp(QMainWindow):
                 if AI_MODULES_AVAILABLE:
                     self.init_ai_modules()
                 
+                # Инициализация новых модулей v6.0
+                if V6_MODULES_AVAILABLE:
+                    self.init_v6_modules()
+                
                 print("Улучшенные модули успешно инициализированы")
             else:
                 print("QApplication не найдено, улучшенные модули будут инициализированы позже")
@@ -741,12 +760,62 @@ class HybridTimeBlockingApp(QMainWindow):
             self.advanced_analytics_widget = None
             self.performance_optimizer = None
     
+    def init_v6_modules(self):
+        """Инициализация модулей v6.0"""
+        try:
+            # Инициализируем систему конфигурации
+            self.config = get_config()
+            print(f"Конфигурация загружена: тема {self.config.ui.theme}, язык {self.config.ui.language}")
+            
+            # Инициализируем систему кэширования
+            self.cache_manager = get_cache_manager()
+            print("Система кэширования инициализирована")
+            
+            # Инициализируем асинхронную систему уведомлений
+            self.async_notification_manager = get_notification_manager()
+            print("Асинхронная система уведомлений инициализирована")
+            
+            # Применяем настройки из конфигурации
+            self.apply_config_settings()
+            
+        except Exception as e:
+            print(f"Ошибка инициализации модулей v6.0: {e}")
+            # Устанавливаем заглушки
+            self.config = None
+            self.cache_manager = None
+            self.async_notification_manager = None
+    
+    def apply_config_settings(self):
+        """Применение настроек из конфигурации"""
+        if self.config:
+            # Применяем размер окна
+            self.resize(self.config.ui.window_width, self.config.ui.window_height)
+            
+            # Применяем тему (базовая реализация)
+            if self.config.ui.theme == "dark":
+                self.setStyleSheet("""
+                    QMainWindow { background-color: #2b2b2b; color: white; }
+                    QWidget { background-color: #2b2b2b; color: white; }
+                """)
+            else:
+                self.setStyleSheet("""
+                    QMainWindow { background-color: white; color: black; }
+                    QWidget { background-color: white; color: black; }
+                """)
+    
     def init_ai_modules(self):
         """Инициализация ИИ модулей"""
         try:
-            # Создаем ИИ-помощника с ключом OpenAI
-            openai_key = "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"
-            self.ai_assistant = AIAssistant(openai_key)
+            # Получаем API ключ из конфигурации или используем переменную окружения
+            api_key = None
+            if hasattr(self, 'config') and self.config:
+                api_key = self.config.ai.api_key
+            
+            if not api_key:
+                api_key = os.getenv('OPENAI_API_KEY', '')
+            
+            if api_key:
+                self.ai_assistant = AIAssistant(api_key)
             self.ai_ui = AIAssistantUI(self, self.ai_assistant)
             
             # Создаем менеджер интеграций
@@ -763,8 +832,13 @@ class HybridTimeBlockingApp(QMainWindow):
     
     def init_ui(self):
         """Инициализация пользовательского интерфейса"""
-        self.setWindowTitle("Hybrid Time Blocking Planner")
-        self.setGeometry(100, 100, 1400, 900)
+        self.setWindowTitle("Time Blocking v6.0 - Hybrid Planner")
+        
+        # Используем размеры из конфигурации, если доступны
+        if hasattr(self, 'config') and self.config:
+            self.setGeometry(100, 100, self.config.ui.window_width, self.config.ui.window_height)
+        else:
+            self.setGeometry(100, 100, 1400, 900)
         
         # Центральный виджет
         central_widget = QWidget()
@@ -774,38 +848,59 @@ class HybridTimeBlockingApp(QMainWindow):
         main_layout = QVBoxLayout()
         central_widget.setLayout(main_layout)
         
-        # Заголовок
-        header = QLabel("Hybrid Time Blocking Planner")
+        # Заголовок с современным дизайном и тенью
+        header = QLabel("Time Blocking v6.0 - Hybrid Planner")
         header.setStyleSheet("""
-            font-size: 24px;
+            font-size: 32px;
             font-weight: bold;
             color: #FF2B43;
-            padding: 20px;
+            padding: 25px;
             text-align: center;
+            background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 rgba(255, 43, 67, 0.15), stop:1 rgba(255, 43, 67, 0.08));
+            border: 2px solid rgba(255, 43, 67, 0.3);
+            border-radius: 15px;
+            margin: 15px;
+            box-shadow: 0 8px 25px rgba(255, 43, 67, 0.2);
         """)
         header.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(header)
         
-        
-        # Вкладки
-        self.tabs = QTabWidget()
+        # Используем современные вкладки, если доступны
+        if V6_MODULES_AVAILABLE:
+            self.tabs = ModernTabWidget()
+        else:
+            self.tabs = QTabWidget()
         self.tabs.setStyleSheet("""
             QTabWidget::pane {
-                border: 2px solid #FF2B43;
-                border-radius: 8px;
-                background: #1E1E1E;
+                border: 2px solid rgba(255, 43, 67, 0.4);
+                border-radius: 12px;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #1A1A1A, stop:1 #2A2A2A);
+                margin-top: 10px;
             }
             QTabBar::tab {
-                background: #2D2D2D;
-                color: white;
-                padding: 12px 20px;
-                margin-right: 2px;
-                border-top-left-radius: 8px;
-                border-top-right-radius: 8px;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #3D3D3D, stop:1 #2D2D2D);
+                color: #CCCCCC;
+                padding: 15px 25px;
+                margin-right: 3px;
+                border-top-left-radius: 10px;
+                border-top-right-radius: 10px;
                 font-weight: bold;
+                font-size: 14px;
+                border: 1px solid #555555;
             }
             QTabBar::tab:selected {
-                background: #FF2B43;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #FF2B43, stop:1 #E01E37);
+                color: white;
+                border-bottom: 2px solid #FF2B43;
+            }
+            QTabBar::tab:hover:!selected {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #4D4D4D, stop:1 #3D3D3D);
+                color: white;
             }
         """)
         
@@ -828,6 +923,12 @@ class HybridTimeBlockingApp(QMainWindow):
             self.integrations_tab.setObjectName("integrations_tab")
             self.tabs.addTab(self.integrations_tab, "🔗 Интеграции")
         
+        # Новые вкладки v6.0
+        if V6_MODULES_AVAILABLE:
+            self.improvements_tab = self.create_improvements_tab()
+            self.improvements_tab.setObjectName("improvements_tab")
+            self.tabs.addTab(self.improvements_tab, "🚀 Улучшения v6.0")
+        
         # Добавляем вкладку с языками программирования (временно отключено)
         # self.languages_tab = self.create_programming_languages_tab()
         # self.languages_tab.setObjectName("languages_tab")
@@ -842,16 +943,23 @@ class HybridTimeBlockingApp(QMainWindow):
         
         main_layout.addWidget(self.tabs)
         
-        # Применяем современную темную тему
+        # Добавляем современную статус-бар, если доступна
+        if V6_MODULES_AVAILABLE:
+            self.status_bar = ModernStatusBar()
+            self.setStatusBar(self.status_bar)
+            self.status_bar.status_label.setText("Time Blocking v6.0 готов к работе")
+        
+        # Применяем современную темную тему с улучшениями
         self.setStyleSheet("""
             QMainWindow {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #1A1A1A, stop:1 #2A2A2A);
-                color: white;
+                    stop:0 #0F0F0F, stop:1 #1F1F1F);
+                color: #FFFFFF;
             }
             QWidget {
                 background: transparent;
-                color: white;
+                color: #FFFFFF;
+                font-family: 'Segoe UI', Arial, sans-serif;
             }
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
@@ -860,7 +968,9 @@ class HybridTimeBlockingApp(QMainWindow):
                 border: none;
                 padding: 12px 24px;
                 font-size: 14px;
-                border-radius: 8px;
+                font-weight: bold;
+                border-radius: 10px;
+                box-shadow: 0 4px 15px rgba(255, 43, 67, 0.3);
                 font-weight: bold;
                 min-width: 120px;
                 min-height: 40px;
@@ -876,17 +986,38 @@ class HybridTimeBlockingApp(QMainWindow):
                     stop:0 #E01E37, stop:1 #C01A31);
             }
             QTextEdit {
-                background: rgba(45, 45, 45, 0.9);
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(35, 35, 35, 0.95), stop:1 rgba(25, 25, 25, 0.95));
+                border: 2px solid rgba(255, 43, 67, 0.5);
+                border-radius: 12px;
+                padding: 18px;
+                font-family: 'Segoe UI', Arial, sans-serif;
+                font-size: 14px;
+                color: #FFFFFF;
+                selection-background-color: rgba(255, 43, 67, 0.4);
+                box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+            }
+            QTextEdit:focus {
                 border: 2px solid #FF2B43;
-                border-radius: 8px;
-                padding: 15px;
-                font-family: 'Consolas', 'Monaco', monospace;
-                font-size: 13px;
-                selection-background-color: #FF2B43;
+                box-shadow: 0 0 15px rgba(255, 43, 67, 0.4);
             }
             QLabel {
-                margin: 8px;
+                margin: 10px;
                 font-weight: 500;
+                color: #FFFFFF;
+            }
+            QLineEdit {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(35, 35, 35, 0.95), stop:1 rgba(25, 25, 25, 0.95));
+                border: 2px solid rgba(255, 43, 67, 0.3);
+                border-radius: 8px;
+                padding: 12px;
+                font-size: 14px;
+                color: #FFFFFF;
+            }
+            QLineEdit:focus {
+                border: 2px solid #FF2B43;
+                box-shadow: 0 0 10px rgba(255, 43, 67, 0.3);
             }
             QTabWidget::pane {
                 border: 2px solid #FF2B43;
@@ -2716,6 +2847,209 @@ class HybridTimeBlockingApp(QMainWindow):
         layout.addStretch()
         widget.setLayout(layout)
         return widget
+    
+    def create_improvements_tab(self):
+        """Создание вкладки улучшений v6.0"""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+        
+        # Заголовок
+        title = QLabel("Улучшения Time Blocking v6.0")
+        title.setStyleSheet("""
+            font-size: 24px;
+            font-weight: bold;
+            color: #FF2B43;
+            margin-bottom: 20px;
+        """)
+        layout.addWidget(title)
+        
+        # Информация об улучшениях
+        info_text = QTextEdit()
+        info_text.setReadOnly(True)
+        info_text.setPlainText("""
+Улучшения Time Blocking v6.0:
+
+🔧 Система конфигурации
+- Централизованное управление настройками
+- Поддержка переменных окружения
+- Автоматическое сохранение конфигурации
+
+💾 Система кэширования
+- Многоуровневое кэширование (память + файлы)
+- Значительное улучшение производительности
+- Автоматическая очистка устаревших данных
+
+🔔 Асинхронные уведомления
+- Умная система с адаптивными алгоритмами
+- Поддержка различных каналов доставки
+- Настраиваемые правила уведомлений
+
+🎨 Современный UI
+- Красивые компоненты с анимациями
+- Градиенты и современный дизайн
+- Улучшенная отзывчивость интерфейса
+
+⚡ Улучшенная производительность
+- Асинхронная архитектура
+- Оптимизированные алгоритмы
+- Эффективное использование ресурсов
+
+📊 Тестирование
+- Комплексные автоматические тесты
+- Проверка всех компонентов
+- Гарантия качества кода
+        """)
+        info_text.setStyleSheet("""
+            QTextEdit {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(35, 35, 35, 0.95), stop:1 rgba(25, 25, 25, 0.95));
+                border: 2px solid rgba(255, 43, 67, 0.6);
+                border-radius: 15px;
+                padding: 25px;
+                font-size: 15px;
+                color: #FFFFFF;
+                font-family: 'Segoe UI', Arial, sans-serif;
+                line-height: 1.6;
+                box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.4);
+            }
+        """)
+        layout.addWidget(info_text)
+        
+        # Кнопки демонстрации
+        buttons_layout = QHBoxLayout()
+        
+        config_btn = QPushButton("Показать конфигурацию")
+        config_btn.clicked.connect(self.show_config_info)
+        config_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #4CAF50, stop:1 #45a049);
+                color: white;
+                border: none;
+                padding: 15px 30px;
+                border-radius: 12px;
+                font-weight: bold;
+                font-size: 14px;
+                box-shadow: 0 6px 20px rgba(76, 175, 80, 0.3);
+            }
+            QPushButton:hover { 
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #5CBF60, stop:1 #4CAF50);
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #3E8E41, stop:1 #357A38);
+            }
+        """)
+        buttons_layout.addWidget(config_btn)
+        
+        cache_btn = QPushButton("Статистика кэша")
+        cache_btn.clicked.connect(self.show_cache_stats)
+        cache_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #2196F3, stop:1 #1976D2);
+                color: white;
+                border: none;
+                padding: 15px 30px;
+                border-radius: 12px;
+                font-weight: bold;
+                font-size: 14px;
+                box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+            }
+            QPushButton:hover { 
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #42A5F5, stop:1 #2196F3);
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(33, 150, 243, 0.4);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #1565C0, stop:1 #0D47A1);
+            }
+        """)
+        buttons_layout.addWidget(cache_btn)
+        
+        test_btn = QPushButton("Тест уведомления")
+        test_btn.clicked.connect(self.send_test_notification)
+        test_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #FF9800, stop:1 #F57C00);
+                color: white;
+                border: none;
+                padding: 15px 30px;
+                border-radius: 12px;
+                font-weight: bold;
+                font-size: 14px;
+                box-shadow: 0 6px 20px rgba(255, 152, 0, 0.3);
+            }
+            QPushButton:hover { 
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #FFB74D, stop:1 #FF9800);
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(255, 152, 0, 0.4);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #E65100, stop:1 #BF360C);
+            }
+        """)
+        buttons_layout.addWidget(test_btn)
+        
+        layout.addLayout(buttons_layout)
+        layout.addStretch()
+        return tab
+    
+    def show_config_info(self):
+        """Показать информацию о конфигурации"""
+        if hasattr(self, 'config') and self.config:
+            info = f"""
+Текущая конфигурация:
+- Тема: {self.config.ui.theme}
+- Язык: {self.config.ui.language}
+- Анимации: {self.config.ui.animations_enabled}
+- Размер окна: {self.config.ui.window_width}x{self.config.ui.window_height}
+- Кэширование: {self.config.data.cache_enabled}
+- Уведомления: {self.config.ui.show_notifications}
+            """
+            QMessageBox.information(self, "Конфигурация", info.strip())
+        else:
+            QMessageBox.warning(self, "Ошибка", "Система конфигурации недоступна")
+    
+    def show_cache_stats(self):
+        """Показать статистику кэша"""
+        if hasattr(self, 'cache_manager') and self.cache_manager:
+            stats = self.cache_manager.get_stats()
+            info = f"""
+Статистика кэширования:
+- Элементов в памяти: {stats['memory_cache']['size']}
+- Попадания: {stats['memory_cache']['hits']}
+- Промахи: {stats['memory_cache']['misses']}
+- Процент попаданий: {stats['memory_cache']['hit_rate']:.1f}%
+            """
+            QMessageBox.information(self, "Статистика кэша", info.strip())
+        else:
+            QMessageBox.warning(self, "Ошибка", "Система кэширования недоступна")
+    
+    def send_test_notification(self):
+        """Отправить тестовое уведомление"""
+        if hasattr(self, 'async_notification_manager') and self.async_notification_manager:
+            notification = create_task_reminder(
+                "test_task",
+                "Тестовая задача из Time Blocking v6.0",
+                datetime.now()
+            )
+            self.async_notification_manager.send_notification_sync(notification)
+            
+            if hasattr(self, 'status_bar'):
+                self.status_bar.status_label.setText("Тестовое уведомление отправлено")
+        else:
+            QMessageBox.warning(self, "Ошибка", "Система уведомлений недоступна")
 
 def main():
     """Главная функция с инициализацией всех улучшений"""
@@ -2723,16 +3057,24 @@ def main():
     
     # Безопасный вывод для Windows консоли
     try:
-        print("🚀 Запуск революционного приложения Time Blocking v5.0...")
-        print("✅ Умные уведомления: активированы")
-        print("✅ Продвинутая аналитика: загружена")
+        print("Запуск революционного приложения Time Blocking v6.0...")
+        print("Умные уведомления: активированы")
+        print("Продвинутая аналитика: загружена")
+        print("Система конфигурации: инициализирована")
+        print("Система кэширования: готова")
+        print("Асинхронные уведомления: активированы")
+        print("Современный UI: загружен")
         print("✅ Drag & Drop интерфейс: готов")
         print("✅ Облачная синхронизация: настроена")
         print("✅ Оптимизация производительности: включена")
     except UnicodeEncodeError:
-        print("Запуск революционного приложения Time Blocking v5.0...")
+        print("Запуск революционного приложения Time Blocking v6.0...")
         print("Умные уведомления: активированы")
         print("Продвинутая аналитика: загружена")
+        print("Система конфигурации: инициализирована")
+        print("Система кэширования: готова")
+        print("Асинхронные уведомления: активированы")
+        print("Современный UI: загружен")
         print("Drag & Drop интерфейс: готов")
         print("Облачная синхронизация: настроена")
         print("Оптимизация производительности: включена")

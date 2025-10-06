@@ -90,11 +90,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\kosty\\Documents\\GitHub\\Time-blocking\\PerformanceModule.csproj",
+      "projectUniqueName": "C:\\Users\\kosty\\Documents\\GitHub\\Time\\PerformanceModule.csproj",
       "projectName": "PerformanceModule",
-      "projectPath": "C:\\Users\\kosty\\Documents\\GitHub\\Time-blocking\\PerformanceModule.csproj",
+      "projectPath": "C:\\Users\\kosty\\Documents\\GitHub\\Time\\PerformanceModule.csproj",
       "packagesPath": "C:\\Users\\kosty\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\kosty\\Documents\\GitHub\\Time-blocking\\obj\\",
+      "outputPath": "C:\\Users\\kosty\\Documents\\GitHub\\Time\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
